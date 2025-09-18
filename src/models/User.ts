@@ -228,3 +228,4 @@ if (mongoose.models.User) {
 }
 
 export { User, Provider };
+export default User;

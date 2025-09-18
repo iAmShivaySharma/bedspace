@@ -30,7 +30,7 @@ export async function authenticate(request: NextRequest): Promise<{ user: any; e
 
     await connectDB();
     const user = await User.findById(payload.userId).select('-password');
-    
+
     if (!user) {
       return { user: null, error: 'User not found' };
     }
@@ -39,6 +39,44 @@ export async function authenticate(request: NextRequest): Promise<{ user: any; e
   } catch (error) {
     console.error('Authentication error:', error);
     return { user: null, error: 'Authentication failed' };
+  }
+}
+
+// Simple auth verification function for API routes
+export async function verifyAuth(request: NextRequest): Promise<{ success: boolean; user?: any; error?: string }> {
+  try {
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+
+    if (!token) {
+      return { success: false, error: 'No token provided' };
+    }
+
+    const payload = verifyToken(token);
+    if (!payload) {
+      return { success: false, error: 'Invalid token' };
+    }
+
+    await connectDB();
+    const user = await User.findById(payload.userId).select('-password');
+
+    if (!user) {
+      return { success: false, error: 'User not found' };
+    }
+
+    return {
+      success: true,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        name: user.name,
+        isVerified: user.isVerified
+      }
+    };
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return { success: false, error: 'Authentication failed' };
   }
 }
 

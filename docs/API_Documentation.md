@@ -537,7 +537,77 @@ Detect location from coordinates.
 
 ---
 
+### Activities & Tracking
+
+#### GET /api/activities/recent
+Get recent user activities and system events.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+- `limit` (optional): Number of activities to return (max 50, default 10)
+- `userRole` (optional): Filter by user role (admin only)
+- `userId` (optional): Filter by specific user ID (admin only)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "activity_id",
+      "action": "login",
+      "description": "User logged in successfully",
+      "details": {},
+      "user": {
+        "id": "user_id",
+        "name": "John Doe",
+        "email": "john@example.com",
+        "role": "seeker"
+      },
+      "userRole": "seeker",
+      "ipAddress": "192.168.1.1",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "timeAgo": "2 hours ago"
+    }
+  ],
+  "total": 10
+}
+```
+
+---
+
 ### Notifications & Messages
+
+#### GET /api/notifications
+Get user notifications with filtering options.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+- `filter` (optional): Filter type (all, read, unread) - default: all
+- `category` (optional): Category filter (all, booking, message, listing, verification, payment, system) - default: all
+- `limit` (optional): Number of notifications to return - default: 20
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "notif_id",
+      "title": "Booking Confirmed",
+      "message": "Your booking has been confirmed",
+      "type": "success",
+      "category": "booking",
+      "isRead": false,
+      "createdAt": "2024-01-15T10:30:00Z",
+      "actionUrl": "/bookings/123"
+    }
+  ],
+  "total": 5
+}
+```
 
 #### GET /api/notifications/count
 Get unread notification count.
@@ -565,6 +635,202 @@ Get unread message count.
   "success": true,
   "data": {
     "count": 5
+  }
+}
+```
+
+---
+
+### Profile Management
+
+#### GET /api/profile
+Get current user's profile information.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "_id": "user_id",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+91 9876543210",
+    "role": "seeker",
+    "bio": "Looking for comfortable accommodation",
+    "location": "Mumbai, Maharashtra",
+    "isVerified": true,
+    "isEmailVerified": true,
+    "isPhoneVerified": true,
+    "createdAt": "2024-01-01T00:00:00Z",
+    "lastLogin": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+#### PUT /api/profile
+Update current user's profile information.
+
+**Headers:**
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**Request Body:**
+```json
+{
+  "name": "Updated Name",
+  "phone": "+91 9876543210",
+  "bio": "Updated bio description",
+  "location": "Mumbai, Maharashtra",
+  "businessName": "Business Name (for providers)"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    // Updated user object
+  }
+}
+```
+
+---
+
+### Admin Reports & Settings
+
+#### GET /api/admin/reports
+Get comprehensive platform reports and analytics.
+
+**Headers:** `Authorization: Bearer <token>` (Admin only)
+
+**Query Parameters:**
+- `timeRange` (optional): Time range (7d, 30d, 90d) - default: 30d
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "userReports": {
+      "totalUsers": 1250,
+      "newUsersThisMonth": 85,
+      "activeUsers": 750,
+      "usersByRole": [
+        {"role": "seeker", "count": 890},
+        {"role": "provider", "count": 320},
+        {"role": "admin", "count": 40}
+      ]
+    },
+    "listingReports": {
+      "totalListings": 680,
+      "activeListings": 520,
+      "pendingApproval": 45,
+      "averagePrice": 12500,
+      "listingsByLocation": [
+        {"location": "Bandra West, Mumbai", "count": 102},
+        {"location": "Andheri East, Mumbai", "count": 82}
+      ]
+    },
+    "bookingReports": {
+      "totalBookings": 1840,
+      "completedBookings": 1520,
+      "totalRevenue": 2450000,
+      "averageBookingValue": 55000,
+      "bookingsByMonth": [
+        {"month": "Jan 2024", "count": 320, "revenue": 480000}
+      ]
+    },
+    "activityReports": {
+      "totalActivities": 5420,
+      "topActions": [
+        {"action": "login", "count": 1250},
+        {"action": "search", "count": 890}
+      ],
+      "dailyActivity": [
+        {"date": "Jan 15", "count": 145}
+      ]
+    }
+  }
+}
+```
+
+#### GET /api/admin/settings
+Get platform configuration settings.
+
+**Headers:** `Authorization: Bearer <token>` (Admin only)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "general": {
+      "platformName": "BedSpace",
+      "platformDescription": "Find comfortable and affordable bed spaces in Mumbai",
+      "supportEmail": "support@bedspace.com",
+      "maintenanceMode": false,
+      "registrationEnabled": true
+    },
+    "booking": {
+      "maxBookingDuration": 365,
+      "minBookingDuration": 1,
+      "cancellationPolicy": "Free cancellation up to 24 hours before check-in.",
+      "autoApprovalEnabled": false,
+      "bookingFee": 5.0
+    },
+    "verification": {
+      "autoVerifyProviders": false,
+      "requiredDocuments": ["Aadhaar Card", "PAN Card", "Property Documents", "Photo"],
+      "verificationTimeout": 7
+    },
+    "notifications": {
+      "emailNotifications": true,
+      "smsNotifications": true,
+      "pushNotifications": true,
+      "adminAlerts": true
+    },
+    "security": {
+      "passwordMinLength": 8,
+      "sessionTimeout": 1440,
+      "maxLoginAttempts": 5,
+      "twoFactorRequired": false
+    }
+  }
+}
+```
+
+#### PUT /api/admin/settings
+Update platform configuration settings.
+
+**Headers:**
+- `Authorization: Bearer <token>` (Admin only)
+- `Content-Type: application/json`
+
+**Request Body:**
+```json
+{
+  "general": {
+    "platformName": "BedSpace",
+    "platformDescription": "Updated description",
+    "supportEmail": "support@bedspace.com",
+    "maintenanceMode": false,
+    "registrationEnabled": true
+  },
+  // ... other setting sections
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Settings updated successfully",
+  "data": {
+    // Updated settings object
   }
 }
 ```
