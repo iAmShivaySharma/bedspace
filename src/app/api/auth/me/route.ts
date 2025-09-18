@@ -34,16 +34,18 @@ export async function GET(request: NextRequest) {
 
     // Add provider-specific data if user is a provider
     if (user.role === 'provider') {
-      userData.verificationStatus = user.verificationStatus;
-      userData.verificationDocuments = user.verificationDocuments;
-      userData.businessName = user.businessName;
-      userData.businessAddress = user.businessAddress;
-      userData.businessPhone = user.businessPhone;
-      userData.rating = user.rating;
-      userData.totalReviews = user.totalReviews;
-      userData.totalListings = user.totalListings;
-      userData.verifiedAt = user.verifiedAt;
-      userData.rejectionReason = user.rejectionReason;
+      const providerData = user as any; // Type assertion for provider-specific properties
+      const userDataExtended = userData as any; // Type assertion for userData
+      userDataExtended.verificationStatus = providerData.verificationStatus;
+      userDataExtended.verificationDocuments = providerData.verificationDocuments;
+      userDataExtended.businessName = providerData.businessName;
+      userDataExtended.businessAddress = providerData.businessAddress;
+      userDataExtended.businessPhone = providerData.businessPhone;
+      userDataExtended.rating = providerData.rating;
+      userDataExtended.totalReviews = providerData.totalReviews;
+      userDataExtended.totalListings = providerData.totalListings;
+      userDataExtended.verifiedAt = providerData.verifiedAt;
+      userDataExtended.rejectionReason = providerData.rejectionReason;
     }
 
     return NextResponse.json(

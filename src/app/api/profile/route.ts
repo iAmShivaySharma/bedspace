@@ -125,8 +125,7 @@ export async function PUT(request: NextRequest) {
       authResult.user.id,
       authResult.user.role,
       'profile_update',
-      undefined,
-      undefined,
+      { updatedFields: Object.keys(body) },
       request
     );
 

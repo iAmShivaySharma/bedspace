@@ -78,7 +78,7 @@ export async function uploadFile(
         image.webp({ quality: opts.quality });
       }
 
-      buffer = await image.toBuffer();
+      buffer = Buffer.from(await image.toBuffer());
       processedSize = buffer.length;
     } catch (error) {
       console.error('Error processing image:', error);

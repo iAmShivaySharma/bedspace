@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Validation failed',
-          details: validationResult.error.errors,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       );
@@ -88,11 +88,13 @@ export async function POST(request: NextRequest) {
 
     // Add provider-specific data if user is a provider
     if (user.role === 'provider') {
-      userData.verificationStatus = user.verificationStatus;
-      userData.businessName = user.businessName;
-      userData.rating = user.rating;
-      userData.totalReviews = user.totalReviews;
-      userData.totalListings = user.totalListings;
+      const providerData = user as any; // Type assertion for provider-specific properties
+      const userDataExtended = userData as any; // Type assertion for userData
+      userDataExtended.verificationStatus = providerData.verificationStatus;
+      userDataExtended.businessName = providerData.businessName;
+      userDataExtended.rating = providerData.rating;
+      userDataExtended.totalReviews = providerData.totalReviews;
+      userDataExtended.totalListings = providerData.totalListings;
     }
 
     // Log successful login

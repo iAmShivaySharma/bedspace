@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Validation failed',
-          details: validationResult.error.errors,
+          details: validationResult.error.issues,
         },
         { status: 400 }
       );
@@ -122,8 +122,9 @@ export async function POST(request: NextRequest) {
     console.error('Registration error:', error);
     
     // Handle duplicate key errors
-    if (error.code === 11000) {
-      const field = Object.keys(error.keyPattern)[0];
+    const mongoError = error as any; // Type assertion for MongoDB error
+    if (mongoError.code === 11000) {
+      const field = Object.keys(mongoError.keyPattern)[0];
       logApiRequest('POST', '/api/auth/register', undefined, 409, Date.now() - startTime);
       return NextResponse.json(
         {

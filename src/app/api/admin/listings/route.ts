@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     ];
 
     // Create listings based on real providers (2-3 listings per provider)
-    const mockListings = [];
+    const mockListings: any[] = [];
     providers.forEach((provider, providerIndex) => {
       const listingsPerProvider = Math.floor(Math.random() * 3) + 1; // 1-3 listings per provider
 
@@ -88,9 +88,10 @@ export async function GET(request: NextRequest) {
 
         // Provider verification status affects listing status
         let listingStatus;
-        if (provider.verificationStatus === 'approved') {
+        const providerData = provider as any; // Type assertion for verificationStatus
+        if (providerData.verificationStatus === 'approved') {
           listingStatus = statuses[Math.floor(Math.random() * 2)]; // active or pending
-        } else if (provider.verificationStatus === 'pending') {
+        } else if (providerData.verificationStatus === 'pending') {
           listingStatus = 'pending';
         } else {
           listingStatus = statuses[Math.floor(Math.random() * statuses.length)];

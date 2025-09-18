@@ -121,7 +121,7 @@ ConversationSchema.index(
 // Virtual for unread message count
 ConversationSchema.virtual('unreadCount').get(function() {
   // This will be populated by aggregation in queries
-  return this._unreadCount || 0;
+  return (this as any)._unreadCount || 0;
 });
 
 // Method to mark message as read

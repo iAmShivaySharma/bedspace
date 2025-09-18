@@ -16,6 +16,11 @@ export interface AuthenticatedRequest extends NextRequest {
 // Middleware to authenticate user
 export async function authenticate(request: NextRequest): Promise<{ user: any; error?: string }> {
   try {
+    // Handle build-time scenario where headers might not be available
+    if (!request.headers) {
+      return { user: null, error: 'No headers available' };
+    }
+
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
@@ -45,6 +50,11 @@ export async function authenticate(request: NextRequest): Promise<{ user: any; e
 // Simple auth verification function for API routes
 export async function verifyAuth(request: NextRequest): Promise<{ success: boolean; user?: any; error?: string }> {
   try {
+    // Handle build-time scenario where headers might not be available
+    if (!request.headers) {
+      return { success: false, error: 'No headers available' };
+    }
+
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
@@ -126,7 +136,8 @@ export function requireProviderApproval() {
     await connectDB();
     const provider = await User.findById(user._id);
     
-    if (!provider || provider.verificationStatus !== 'approved') {
+    const providerData = provider as any; // Type assertion for verificationStatus
+    if (!provider || providerData.verificationStatus !== 'approved') {
       return { error: 'Provider approval required' };
     }
 

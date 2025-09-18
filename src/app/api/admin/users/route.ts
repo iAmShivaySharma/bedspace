@@ -61,7 +61,8 @@ export async function GET(request: NextRequest) {
       const activityMultiplier = Math.max(0.1, Math.min(1, daysSinceJoined / 30)); // More activity for older users
 
       // Generate realistic last login based on user status
-      const isActive = user.isActive !== false && Math.random() > 0.15; // 85% active users
+      const userData = user as any; // Type assertion for isActive
+      const isActive = userData.isActive !== false && Math.random() > 0.15; // 85% active users
       let lastLogin;
       if (isActive) {
         // Active users: login within last 7 days
@@ -81,7 +82,7 @@ export async function GET(request: NextRequest) {
         totalListings: userObj.role === 'provider' ? Math.floor(activityMultiplier * 3) + 1 : 0,
         profileCompletion: userObj.role === 'admin' ? 100 : Math.floor(Math.random() * 25 + 75), // 75-100%
         rating: userObj.role === 'provider' ? (4.0 + Math.random() * 1.0).toFixed(1) : null,
-        verificationStatus: userObj.verificationStatus || (userObj.role === 'admin' ? 'approved' : 'pending')
+        verificationStatus: (userObj as any).verificationStatus || (userObj.role === 'admin' ? 'approved' : 'pending')
       };
     });
 

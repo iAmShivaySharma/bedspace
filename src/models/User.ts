@@ -205,7 +205,8 @@ UserSchema.statics.findByIdentifier = function(identifier: string) {
 // Pre-save middleware to update verification status
 UserSchema.pre('save', function(next) {
   if (this.isModified('isEmailVerified') || this.isModified('isPhoneVerified')) {
-    this.isVerified = this.isEmailVerified && (this.role !== 'provider' || this.verificationStatus === 'approved');
+    const userData = this as any; // Type assertion for verificationStatus
+    this.isVerified = this.isEmailVerified && (this.role !== 'provider' || userData.verificationStatus === 'approved');
   }
   next();
 });

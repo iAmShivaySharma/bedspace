@@ -168,4 +168,31 @@ ActivitySchema.statics.getActivityStats = async function(
   return stats;
 };
 
-export default mongoose.models.Activity || mongoose.model<IActivity>('Activity', ActivitySchema);
+// Define the model interface with static methods
+interface IActivityModel extends mongoose.Model<IActivity> {
+  logActivity(
+    userId: string,
+    userRole: string,
+    action: string,
+    description: string,
+    details?: any,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<IActivity | null>;
+
+  getRecentActivities(
+    userId?: string,
+    userRole?: string,
+    limit?: number,
+    skip?: number
+  ): Promise<any[]>;
+
+  getActivityStats(
+    timeRange?: 'today' | '7d' | '30d'
+  ): Promise<any[]>;
+}
+
+const Activity = (mongoose.models.Activity as IActivityModel) ||
+  mongoose.model<IActivity, IActivityModel>('Activity', ActivitySchema);
+
+export default Activity;

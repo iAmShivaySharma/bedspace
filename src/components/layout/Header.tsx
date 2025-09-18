@@ -33,6 +33,7 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({ user, onMenuToggle, title, notifications = 0 }: DashboardHeaderProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   useEffect(() => {
     setMounted(true);

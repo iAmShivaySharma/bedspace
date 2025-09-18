@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Add new document
-    provider.verificationDocuments.push(newDocument);
+    provider.verificationDocuments.push(newDocument as any);
 
     // Reset verification status to pending if it was rejected
     if (provider.verificationStatus === 'rejected') {

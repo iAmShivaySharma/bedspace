@@ -55,10 +55,10 @@ export async function GET(request: NextRequest) {
       description: activity.description,
       details: activity.details,
       user: activity.userId ? {
-        id: activity.userId._id,
-        name: activity.userId.name,
-        email: activity.userId.email,
-        role: activity.userId.role
+        id: (activity.userId as any)._id,
+        name: (activity.userId as any).name,
+        email: (activity.userId as any).email,
+        role: (activity.userId as any).role
       } : null,
       userRole: activity.userRole,
       ipAddress: activity.ipAddress,
