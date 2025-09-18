@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/middleware/auth';
+import { verifyAuth, AuthenticatedUser } from '@/middleware/auth';
 import { connectDB } from '@/lib/mongodb';
 import Activity from '@/models/Activity';
 import { logApiRequest, logError } from '@/lib/logger';
 
+interface PopulatedUser {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // Verify authentication
     const authResult = await verifyAuth(request);
@@ -26,9 +33,10 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     // Build query based on user role and permissions
-    let query: any = {};
-    
-    if (authResult.user.role === 'admin') {
+    const query: Record<string, unknown> = {};
+
+    const user = authResult.user as AuthenticatedUser;
+    if (user.role === 'admin') {
       // Admins can see all activities or filter by role/user
       if (userRole) {
         query.userRole = userRole;
@@ -38,7 +46,7 @@ export async function GET(request: NextRequest) {
       }
     } else {
       // Regular users can only see their own activities
-      query.userId = authResult.user.id;
+      query.userId = user.id;
     }
 
     // Get recent activities
@@ -54,34 +62,35 @@ export async function GET(request: NextRequest) {
       action: activity.action,
       description: activity.description,
       details: activity.details,
-      user: activity.userId ? {
-        id: (activity.userId as any)._id,
-        name: (activity.userId as any).name,
-        email: (activity.userId as any).email,
-        role: (activity.userId as any).role
-      } : null,
+      user: activity.userId
+        ? {
+            id: (activity.userId as unknown as PopulatedUser)._id,
+            name: (activity.userId as unknown as PopulatedUser).name,
+            email: (activity.userId as unknown as PopulatedUser).email,
+            role: (activity.userId as unknown as PopulatedUser).role,
+          }
+        : null,
       userRole: activity.userRole,
       ipAddress: activity.ipAddress,
       createdAt: activity.createdAt,
-      timeAgo: getTimeAgo(activity.createdAt)
+      timeAgo: getTimeAgo(activity.createdAt),
     }));
 
-    logApiRequest('GET', '/api/activities/recent', authResult.user.id, 200, Date.now() - startTime);
+    logApiRequest('GET', '/api/activities/recent', user.id, 200, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
       data: formattedActivities,
-      total: formattedActivities.length
+      total: formattedActivities.length,
+    });
+  } catch (error) {
+    logError('Get recent activities error', error, {
+      url: request.url,
+      method: 'GET',
     });
 
-  } catch (error) {
-    logError('Get recent activities error', error, { 
-      url: request.url,
-      method: 'GET'
-    });
-    
     logApiRequest('GET', '/api/activities/recent', undefined, 500, Date.now() - startTime);
-    
+
     return NextResponse.json(
       { success: false, error: 'Failed to get recent activities' },
       { status: 500 }
@@ -93,30 +102,30 @@ export async function GET(request: NextRequest) {
 function getTimeAgo(date: Date): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - new Date(date).getTime()) / 1000);
-  
+
   if (diffInSeconds < 60) {
     return 'Just now';
   }
-  
+
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   if (diffInMinutes < 60) {
     return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
   }
-  
+
   const diffInHours = Math.floor(diffInMinutes / 60);
   if (diffInHours < 24) {
     return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
   }
-  
+
   const diffInDays = Math.floor(diffInHours / 24);
   if (diffInDays < 7) {
     return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
   }
-  
+
   const diffInWeeks = Math.floor(diffInDays / 7);
   if (diffInWeeks < 4) {
     return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
   }
-  
+
   return new Date(date).toLocaleDateString();
 }

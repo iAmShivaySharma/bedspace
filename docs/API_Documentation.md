@@ -5,6 +5,7 @@
 BedSpace is a comprehensive bed space rental platform that connects seekers with providers. This documentation covers all available API endpoints, authentication methods, and data structures.
 
 ## Base URL
+
 ```
 http://localhost:3001
 ```
@@ -28,9 +29,11 @@ Authorization: Bearer <your_jwt_token>
 ### Authentication Endpoints
 
 #### POST /api/auth/register
+
 Register a new user account.
 
 **Request Body:**
+
 ```json
 {
   "name": "John Doe",
@@ -42,6 +45,7 @@ Register a new user account.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -60,9 +64,11 @@ Register a new user account.
 ```
 
 #### POST /api/auth/login
+
 Login with email and password.
 
 **Request Body:**
+
 ```json
 {
   "email": "john@example.com",
@@ -71,6 +77,7 @@ Login with email and password.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -89,11 +96,13 @@ Login with email and password.
 ```
 
 #### GET /api/auth/me
+
 Get current user information.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -109,11 +118,13 @@ Get current user information.
 ```
 
 #### POST /api/auth/logout
+
 Logout current user.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -128,11 +139,13 @@ Logout current user.
 All admin endpoints require `role: "admin"` and valid authentication.
 
 #### GET /api/admin/stats
+
 Get platform statistics overview.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -152,9 +165,11 @@ Get platform statistics overview.
 ```
 
 #### GET /api/admin/users
+
 Get all users with filtering and pagination.
 
 **Query Parameters:**
+
 - `role` (optional): Filter by role (all, seeker, provider, admin)
 - `search` (optional): Search by name or email
 - `page` (optional): Page number (default: 1)
@@ -163,6 +178,7 @@ Get all users with filtering and pagination.
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -188,15 +204,18 @@ Get all users with filtering and pagination.
 ```
 
 #### POST /api/admin/users/:userId/:action
+
 Perform actions on users (activate, deactivate, verify).
 
 **Parameters:**
+
 - `userId`: User ID
 - `action`: Action to perform (activate, deactivate, verify)
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -205,9 +224,11 @@ Perform actions on users (activate, deactivate, verify).
 ```
 
 #### GET /api/admin/listings
+
 Get all listings with filtering.
 
 **Query Parameters:**
+
 - `status` (optional): Filter by status (all, active, pending, inactive, rejected)
 - `type` (optional): Filter by type (all, private_room, shared_room, entire_place)
 - `search` (optional): Search by title, location, or provider
@@ -215,6 +236,7 @@ Get all listings with filtering.
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -241,15 +263,18 @@ Get all listings with filtering.
 ```
 
 #### POST /api/admin/listings/:listingId/:action
+
 Perform actions on listings (approve, reject, activate, deactivate).
 
 **Parameters:**
+
 - `listingId`: Listing ID
 - `action`: Action to perform (approve, reject, activate, deactivate)
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -263,9 +288,11 @@ Perform actions on listings (approve, reject, activate, deactivate).
 ```
 
 #### GET /api/admin/bookings
+
 Get all bookings with filtering.
 
 **Query Parameters:**
+
 - `status` (optional): Filter by status (all, pending, approved, rejected, cancelled, completed)
 - `paymentStatus` (optional): Filter by payment status (all, pending, paid, failed, refunded)
 - `search` (optional): Search by seeker, provider, or listing
@@ -273,6 +300,7 @@ Get all bookings with filtering.
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -308,14 +336,17 @@ Get all bookings with filtering.
 ```
 
 #### GET /api/admin/analytics
+
 Get platform analytics data.
 
 **Query Parameters:**
+
 - `range` (optional): Time range (7d, 30d, 90d, 1y) - default: 30d
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -377,11 +408,13 @@ Get platform analytics data.
 All seeker endpoints require `role: "seeker"` and valid authentication.
 
 #### GET /api/seeker/stats
+
 Get seeker dashboard statistics.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -395,11 +428,13 @@ Get seeker dashboard statistics.
 ```
 
 #### GET /api/seeker/activities
+
 Get recent seeker activities.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -417,11 +452,13 @@ Get recent seeker activities.
 ```
 
 #### GET /api/seeker/favorites
+
 Get seeker's saved/favorite listings.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -442,11 +479,13 @@ Get seeker's saved/favorite listings.
 ```
 
 #### GET /api/seeker/bookings
+
 Get seeker's booking history.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -469,9 +508,11 @@ Get seeker's booking history.
 ### Search & Location Endpoints
 
 #### GET /api/search
+
 Search for listings with filters.
 
 **Query Parameters:**
+
 - `location` (optional): Location to search in
 - `minPrice` (optional): Minimum price filter
 - `maxPrice` (optional): Maximum price filter
@@ -481,6 +522,7 @@ Search for listings with filters.
 - `limit` (optional): Items per page
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -512,17 +554,20 @@ Search for listings with filters.
 ```
 
 #### POST /api/location/detect
+
 Detect location from coordinates.
 
 **Request Body:**
+
 ```json
 {
-  "latitude": 19.0760,
+  "latitude": 19.076,
   "longitude": 72.8777
 }
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -540,16 +585,19 @@ Detect location from coordinates.
 ### Activities & Tracking
 
 #### GET /api/activities/recent
+
 Get recent user activities and system events.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Query Parameters:**
+
 - `limit` (optional): Number of activities to return (max 50, default 10)
 - `userRole` (optional): Filter by user role (admin only)
 - `userId` (optional): Filter by specific user ID (admin only)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -580,16 +628,19 @@ Get recent user activities and system events.
 ### Notifications & Messages
 
 #### GET /api/notifications
+
 Get user notifications with filtering options.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Query Parameters:**
+
 - `filter` (optional): Filter type (all, read, unread) - default: all
 - `category` (optional): Category filter (all, booking, message, listing, verification, payment, system) - default: all
 - `limit` (optional): Number of notifications to return - default: 20
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -610,11 +661,13 @@ Get user notifications with filtering options.
 ```
 
 #### GET /api/notifications/count
+
 Get unread notification count.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -624,12 +677,46 @@ Get unread notification count.
 }
 ```
 
+#### GET /api/messages/conversations
+
+Get user's message conversations.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "conv_123",
+      "participants": [
+        {
+          "id": "user_456",
+          "name": "John Doe",
+          "avatar": "/avatars/john.jpg"
+        }
+      ],
+      "lastMessage": {
+        "content": "Is the room still available?",
+        "timestamp": "2024-01-15T10:30:00Z",
+        "sender": "user_456"
+      },
+      "unreadCount": 2
+    }
+  ]
+}
+```
+
 #### GET /api/messages/unread-count
+
 Get unread message count.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -639,16 +726,63 @@ Get unread message count.
 }
 ```
 
+#### GET /api/payments
+
+Get user's payment history.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Query Parameters:**
+
+- `status` (optional): Filter by payment status (pending, completed, failed)
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 20)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "payments": [
+      {
+        "id": "pay_123",
+        "amount": 15000,
+        "status": "completed",
+        "type": "booking_payment",
+        "description": "Booking payment for Cozy Room in Mumbai",
+        "date": "2024-01-15T10:30:00Z",
+        "method": "upi",
+        "transactionId": "TXN123456789"
+      }
+    ],
+    "summary": {
+      "totalPaid": 45000,
+      "pendingAmount": 5000,
+      "totalTransactions": 8
+    },
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 8,
+      "pages": 1
+    }
+  }
+}
+```
+
 ---
 
 ### Profile Management
 
 #### GET /api/profile
+
 Get current user's profile information.
 
 **Headers:** `Authorization: Bearer <token>`
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -670,13 +804,16 @@ Get current user's profile information.
 ```
 
 #### PUT /api/profile
+
 Update current user's profile information.
 
 **Headers:**
+
 - `Authorization: Bearer <token>`
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "name": "Updated Name",
@@ -688,6 +825,7 @@ Update current user's profile information.
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -703,14 +841,17 @@ Update current user's profile information.
 ### Admin Reports & Settings
 
 #### GET /api/admin/reports
+
 Get comprehensive platform reports and analytics.
 
 **Headers:** `Authorization: Bearer <token>` (Admin only)
 
 **Query Parameters:**
+
 - `timeRange` (optional): Time range (7d, 30d, 90d) - default: 30d
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -720,9 +861,9 @@ Get comprehensive platform reports and analytics.
       "newUsersThisMonth": 85,
       "activeUsers": 750,
       "usersByRole": [
-        {"role": "seeker", "count": 890},
-        {"role": "provider", "count": 320},
-        {"role": "admin", "count": 40}
+        { "role": "seeker", "count": 890 },
+        { "role": "provider", "count": 320 },
+        { "role": "admin", "count": 40 }
       ]
     },
     "listingReports": {
@@ -731,8 +872,8 @@ Get comprehensive platform reports and analytics.
       "pendingApproval": 45,
       "averagePrice": 12500,
       "listingsByLocation": [
-        {"location": "Bandra West, Mumbai", "count": 102},
-        {"location": "Andheri East, Mumbai", "count": 82}
+        { "location": "Bandra West, Mumbai", "count": 102 },
+        { "location": "Andheri East, Mumbai", "count": 82 }
       ]
     },
     "bookingReports": {
@@ -740,30 +881,28 @@ Get comprehensive platform reports and analytics.
       "completedBookings": 1520,
       "totalRevenue": 2450000,
       "averageBookingValue": 55000,
-      "bookingsByMonth": [
-        {"month": "Jan 2024", "count": 320, "revenue": 480000}
-      ]
+      "bookingsByMonth": [{ "month": "Jan 2024", "count": 320, "revenue": 480000 }]
     },
     "activityReports": {
       "totalActivities": 5420,
       "topActions": [
-        {"action": "login", "count": 1250},
-        {"action": "search", "count": 890}
+        { "action": "login", "count": 1250 },
+        { "action": "search", "count": 890 }
       ],
-      "dailyActivity": [
-        {"date": "Jan 15", "count": 145}
-      ]
+      "dailyActivity": [{ "date": "Jan 15", "count": 145 }]
     }
   }
 }
 ```
 
 #### GET /api/admin/settings
+
 Get platform configuration settings.
 
 **Headers:** `Authorization: Bearer <token>` (Admin only)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -804,13 +943,16 @@ Get platform configuration settings.
 ```
 
 #### PUT /api/admin/settings
+
 Update platform configuration settings.
 
 **Headers:**
+
 - `Authorization: Bearer <token>` (Admin only)
 - `Content-Type: application/json`
 
 **Request Body:**
+
 ```json
 {
   "general": {
@@ -819,12 +961,13 @@ Update platform configuration settings.
     "supportEmail": "support@bedspace.com",
     "maintenanceMode": false,
     "registrationEnabled": true
-  },
+  }
   // ... other setting sections
 }
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -862,6 +1005,7 @@ All endpoints return consistent error responses:
 ## Rate Limiting
 
 The API implements rate limiting to prevent abuse:
+
 - **Authentication endpoints**: 5 requests per minute
 - **General endpoints**: 100 requests per minute
 - **Admin endpoints**: 200 requests per minute
@@ -871,6 +1015,7 @@ The API implements rate limiting to prevent abuse:
 ## Data Models
 
 ### User Model
+
 ```typescript
 interface User {
   _id: string;
@@ -886,6 +1031,7 @@ interface User {
 ```
 
 ### Listing Model
+
 ```typescript
 interface Listing {
   _id: string;
@@ -910,6 +1056,7 @@ interface Listing {
 ```
 
 ### Booking Model
+
 ```typescript
 interface Booking {
   _id: string;
@@ -956,6 +1103,7 @@ interface Booking {
 ## Support
 
 For API support or questions:
+
 - **Email**: dev@bedspace.com
 - **Documentation**: This file
 - **Postman Collection**: Use the provided collection for testing
@@ -967,11 +1115,13 @@ For API support or questions:
 ## Environment Setup
 
 ### Prerequisites
+
 - Node.js 18+
 - MongoDB 5.0+
 - MinIO (for file storage)
 
 ### Installation
+
 ```bash
 # Clone the repository
 git clone <repository-url>
@@ -988,6 +1138,7 @@ npm run dev
 ```
 
 ### Environment Variables
+
 ```env
 # Database
 MONGODB_URI=mongodb://localhost:27017/bedspace
@@ -1007,9 +1158,10 @@ NEXT_PUBLIC_APP_URL=http://localhost:3001
 ```
 
 ### Default Admin Account
+
 ```
 Email: admin@bedspace.com
 Password: admin123
 ```
 
-*Last updated: January 2024*
+_Last updated: January 2024_

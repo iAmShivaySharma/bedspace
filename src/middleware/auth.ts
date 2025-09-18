@@ -1,20 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken, getUserFromToken } from '@/utils/auth';
+import { verifyToken } from '@/utils/auth';
 import connectDB from '@/lib/mongodb';
 import { User } from '@/models/User';
 
+export interface AuthenticatedUser {
+  _id: string;
+  id: string;
+  email: string;
+  role: 'seeker' | 'provider' | 'admin';
+  name: string;
+  isVerified: boolean;
+  phone?: string;
+  avatar?: string;
+  isEmailVerified?: boolean;
+  isPhoneVerified?: boolean;
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
 export interface AuthenticatedRequest extends NextRequest {
-  user?: {
-    _id: string;
-    email: string;
-    role: string;
-    name: string;
-    isVerified: boolean;
-  };
+  user?: AuthenticatedUser;
 }
 
 // Middleware to authenticate user
-export async function authenticate(request: NextRequest): Promise<{ user: any; error?: string }> {
+export async function authenticate(
+  request: NextRequest
+): Promise<{ user: AuthenticatedUser | null; error?: string }> {
   try {
     // Handle build-time scenario where headers might not be available
     if (!request.headers) {
@@ -40,7 +52,24 @@ export async function authenticate(request: NextRequest): Promise<{ user: any; e
       return { user: null, error: 'User not found' };
     }
 
-    return { user };
+    const userObj = user.toObject();
+    return {
+      user: {
+        _id: userObj._id.toString(),
+        id: userObj._id.toString(),
+        email: userObj.email,
+        role: userObj.role,
+        name: userObj.name,
+        isVerified: userObj.isVerified,
+        phone: userObj.phone,
+        avatar: userObj.avatar,
+        isEmailVerified: userObj.isEmailVerified,
+        isPhoneVerified: userObj.isPhoneVerified,
+        lastLogin: userObj.lastLogin,
+        createdAt: userObj.createdAt,
+        updatedAt: userObj.updatedAt,
+      } as AuthenticatedUser,
+    };
   } catch (error) {
     console.error('Authentication error:', error);
     return { user: null, error: 'Authentication failed' };
@@ -48,7 +77,9 @@ export async function authenticate(request: NextRequest): Promise<{ user: any; e
 }
 
 // Simple auth verification function for API routes
-export async function verifyAuth(request: NextRequest): Promise<{ success: boolean; user?: any; error?: string }> {
+export async function verifyAuth(
+  request: NextRequest
+): Promise<{ success: boolean; user?: AuthenticatedUser; error?: string }> {
   try {
     // Handle build-time scenario where headers might not be available
     if (!request.headers) {
@@ -77,12 +108,20 @@ export async function verifyAuth(request: NextRequest): Promise<{ success: boole
     return {
       success: true,
       user: {
+        _id: user._id.toString(),
         id: user._id.toString(),
         email: user.email,
         role: user.role,
         name: user.name,
-        isVerified: user.isVerified
-      }
+        isVerified: user.isVerified,
+        phone: user.phone,
+        avatar: user.avatar,
+        isEmailVerified: user.isEmailVerified,
+        isPhoneVerified: user.isPhoneVerified,
+        lastLogin: user.lastLogin,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
     };
   } catch (error) {
     console.error('Authentication error:', error);
@@ -91,14 +130,15 @@ export async function verifyAuth(request: NextRequest): Promise<{ success: boole
 }
 
 // Middleware to check if user has required role
+
 export function requireRole(allowedRoles: string | string[]) {
-  return async (request: NextRequest, user: any) => {
+  return async (_request: NextRequest, user: AuthenticatedUser | null) => {
     if (!user) {
       return { error: 'Authentication required' };
     }
 
     const roles = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
-    
+
     if (!roles.includes(user.role)) {
       return { error: 'Insufficient permissions' };
     }
@@ -109,7 +149,7 @@ export function requireRole(allowedRoles: string | string[]) {
 
 // Middleware to check if user is verified
 export function requireVerification() {
-  return async (request: NextRequest, user: any) => {
+  return async (_request: NextRequest, user: AuthenticatedUser | null) => {
     if (!user) {
       return { error: 'Authentication required' };
     }
@@ -124,7 +164,7 @@ export function requireVerification() {
 
 // Middleware to check if provider is approved
 export function requireProviderApproval() {
-  return async (request: NextRequest, user: any) => {
+  return async (_request: NextRequest, user: AuthenticatedUser | null) => {
     if (!user) {
       return { error: 'Authentication required' };
     }
@@ -134,9 +174,13 @@ export function requireProviderApproval() {
     }
 
     await connectDB();
-    const provider = await User.findById(user._id);
-    
-    const providerData = provider as any; // Type assertion for verificationStatus
+    const provider = await User.findById(user._id || user.id);
+
+    // Type assertion for provider-specific properties
+    interface ProviderUser {
+      verificationStatus?: string;
+    }
+    const providerData = provider as ProviderUser;
     if (!provider || providerData.verificationStatus !== 'approved') {
       return { error: 'Provider approval required' };
     }
@@ -146,12 +190,14 @@ export function requireProviderApproval() {
 }
 
 // Helper function to create authentication middleware
-export function createAuthMiddleware(options: {
-  requireAuth?: boolean;
-  roles?: string | string[];
-  requireVerified?: boolean;
-  requireProviderApproval?: boolean;
-} = {}) {
+export function createAuthMiddleware(
+  options: {
+    requireAuth?: boolean;
+    roles?: string | string[];
+    requireVerified?: boolean;
+    requireProviderApproval?: boolean;
+  } = {}
+) {
   return async (request: NextRequest) => {
     const {
       requireAuth = true,
@@ -164,26 +210,20 @@ export function createAuthMiddleware(options: {
     const { user, error } = await authenticate(request);
 
     if (requireAuth && error) {
-      return NextResponse.json(
-        { success: false, error },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error }, { status: 401 });
     }
 
     // Check roles
     if (roles && user) {
-      const roleCheck = await requireRole(roles)(request, user);
+      const roleCheck = await requireRole(roles)(request, user as AuthenticatedUser);
       if (roleCheck.error) {
-        return NextResponse.json(
-          { success: false, error: roleCheck.error },
-          { status: 403 }
-        );
+        return NextResponse.json({ success: false, error: roleCheck.error }, { status: 403 });
       }
     }
 
     // Check verification
     if (requireVerified && user) {
-      const verificationCheck = await requireVerification()(request, user);
+      const verificationCheck = await requireVerification()(request, user as AuthenticatedUser);
       if (verificationCheck.error) {
         return NextResponse.json(
           { success: false, error: verificationCheck.error },
@@ -194,12 +234,9 @@ export function createAuthMiddleware(options: {
 
     // Check provider approval
     if (requireApproval && user) {
-      const approvalCheck = await requireProviderApproval()(request, user);
+      const approvalCheck = await requireProviderApproval()(request, user as AuthenticatedUser);
       if (approvalCheck.error) {
-        return NextResponse.json(
-          { success: false, error: approvalCheck.error },
-          { status: 403 }
-        );
+        return NextResponse.json({ success: false, error: approvalCheck.error }, { status: 403 });
       }
     }
 
@@ -210,11 +247,13 @@ export function createAuthMiddleware(options: {
 // Rate limiting middleware
 const rateLimitMap = new Map();
 
-export function rateLimit(options: {
-  windowMs: number;
-  maxRequests: number;
-  keyGenerator?: (request: NextRequest) => string;
-} = { windowMs: 15 * 60 * 1000, maxRequests: 100 }) {
+export function rateLimit(
+  options: {
+    windowMs: number;
+    maxRequests: number;
+    keyGenerator?: (request: NextRequest) => string;
+  } = { windowMs: 15 * 60 * 1000, maxRequests: 100 }
+) {
   const { windowMs, maxRequests, keyGenerator } = options;
 
   return (request: NextRequest) => {
@@ -227,10 +266,7 @@ export function rateLimit(options: {
     const validRequests = requests.filter((time: number) => time > windowStart);
 
     if (validRequests.length >= maxRequests) {
-      return NextResponse.json(
-        { success: false, error: 'Too many requests' },
-        { status: 429 }
-      );
+      return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
     }
 
     validRequests.push(now);

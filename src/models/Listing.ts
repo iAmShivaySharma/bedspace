@@ -59,127 +59,132 @@ const ListingImageSchema = new Schema<IListingImage>({
   },
 });
 
-const ListingSchema = new Schema<IListing>({
-  providerId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true,
-  },
-  title: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100,
-    index: 'text',
-  },
-  description: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 1000,
-    index: 'text',
-  },
-  address: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 300,
-  },
-  city: {
-    type: String,
-    required: true,
-    trim: true,
-    lowercase: true,
-    index: true,
-  },
-  state: {
-    type: String,
-    required: true,
-    trim: true,
-    index: true,
-  },
-  pincode: {
-    type: String,
-    required: true,
-    trim: true,
-    match: /^\d{6}$/,
-    index: true,
-  },
-  coordinates: {
-    latitude: {
-      type: Number,
-      min: -90,
-      max: 90,
+const ListingSchema = new Schema<IListing>(
+  {
+    providerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
     },
-    longitude: {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+      index: 'text',
+    },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 1000,
+      index: 'text',
+    },
+    address: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 300,
+    },
+    city: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+      index: true,
+    },
+    state: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+    pincode: {
+      type: String,
+      required: true,
+      trim: true,
+      match: /^\d{6}$/,
+      index: true,
+    },
+    coordinates: {
+      latitude: {
+        type: Number,
+        min: -90,
+        max: 90,
+      },
+      longitude: {
+        type: Number,
+        min: -180,
+        max: 180,
+      },
+    },
+    rent: {
       type: Number,
-      min: -180,
-      max: 180,
+      required: true,
+      min: 0,
+      index: true,
+    },
+    securityDeposit: {
+      type: Number,
+      required: true,
+      min: 0,
+    },
+    roomType: {
+      type: String,
+      enum: Object.values(ROOM_TYPES),
+      required: true,
+      index: true,
+    },
+    genderPreference: {
+      type: String,
+      enum: Object.values(GENDER_PREFERENCES),
+      required: true,
+      index: true,
+    },
+    facilities: [
+      {
+        type: String,
+        enum: FACILITIES,
+      },
+    ],
+    images: [ListingImageSchema],
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    isApproved: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    approvedAt: Date,
+    rejectionReason: String,
+    availableFrom: {
+      type: Date,
+      required: true,
+      index: true,
+    },
+    viewCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    bookingCount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
-  rent: {
-    type: Number,
-    required: true,
-    min: 0,
-    index: true,
-  },
-  securityDeposit: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  roomType: {
-    type: String,
-    enum: Object.values(ROOM_TYPES),
-    required: true,
-    index: true,
-  },
-  genderPreference: {
-    type: String,
-    enum: Object.values(GENDER_PREFERENCES),
-    required: true,
-    index: true,
-  },
-  facilities: [{
-    type: String,
-    enum: FACILITIES,
-  }],
-  images: [ListingImageSchema],
-  isActive: {
-    type: Boolean,
-    default: true,
-    index: true,
-  },
-  isApproved: {
-    type: Boolean,
-    default: false,
-    index: true,
-  },
-  approvedBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  approvedAt: Date,
-  rejectionReason: String,
-  availableFrom: {
-    type: Date,
-    required: true,
-    index: true,
-  },
-  viewCount: {
-    type: Number,
-    default: 0,
-    min: 0,
-  },
-  bookingCount: {
-    type: Number,
-    default: 0,
-    min: 0,
-  },
-}, {
-  timestamps: true,
-});
+  {
+    timestamps: true,
+  }
+);
 
 // Compound indexes for better query performance
 ListingSchema.index({ city: 1, isActive: 1, isApproved: 1 });
@@ -190,31 +195,34 @@ ListingSchema.index({ createdAt: -1 });
 ListingSchema.index({ availableFrom: 1, isActive: 1 });
 
 // Geospatial index for location-based queries
-ListingSchema.index({ 'coordinates': '2dsphere' });
+ListingSchema.index({ coordinates: '2dsphere' });
 
 // Text index for search functionality
-ListingSchema.index({
-  title: 'text',
-  description: 'text',
-  city: 'text',
-  address: 'text',
-}, {
-  weights: {
-    title: 10,
-    city: 5,
-    description: 2,
-    address: 1,
+ListingSchema.index(
+  {
+    title: 'text',
+    description: 'text',
+    city: 'text',
+    address: 'text',
   },
-});
+  {
+    weights: {
+      title: 10,
+      city: 5,
+      description: 2,
+      address: 1,
+    },
+  }
+);
 
 // Virtual for primary image
-ListingSchema.virtual('primaryImage').get(function() {
+ListingSchema.virtual('primaryImage').get(function () {
   const primaryImg = this.images.find(img => img.isPrimary);
   return primaryImg || this.images[0] || null;
 });
 
 // Virtual for formatted rent
-ListingSchema.virtual('formattedRent').get(function() {
+ListingSchema.virtual('formattedRent').get(function () {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
@@ -223,19 +231,31 @@ ListingSchema.virtual('formattedRent').get(function() {
 });
 
 // Method to increment view count
-ListingSchema.methods.incrementViewCount = function() {
+ListingSchema.methods.incrementViewCount = function () {
   this.viewCount += 1;
   return this.save();
 };
 
 // Method to increment booking count
-ListingSchema.methods.incrementBookingCount = function() {
+ListingSchema.methods.incrementBookingCount = function () {
   this.bookingCount += 1;
   return this.save();
 };
 
+interface SearchFilters {
+  city?: string;
+  minRent?: number;
+  maxRent?: number;
+  roomType?: 'single' | 'shared' | 'private';
+  genderPreference?: 'male' | 'female' | 'any';
+  facilities?: string[];
+  sortBy?: 'rent_asc' | 'rent_desc' | 'newest' | 'oldest';
+  page?: number;
+  limit?: number;
+}
+
 // Static method for search with filters
-ListingSchema.statics.searchListings = function(filters: any, options: any = {}) {
+ListingSchema.statics.searchListings = function (filters: SearchFilters) {
   const {
     city,
     minRent,
@@ -248,7 +268,7 @@ ListingSchema.statics.searchListings = function(filters: any, options: any = {})
     limit = 20,
   } = filters;
 
-  const query: any = {
+  const query: Record<string, unknown> = {
     isActive: true,
     isApproved: true,
     availableFrom: { $lte: new Date() },
@@ -260,9 +280,10 @@ ListingSchema.statics.searchListings = function(filters: any, options: any = {})
   }
 
   if (minRent || maxRent) {
-    query.rent = {};
-    if (minRent) query.rent.$gte = minRent;
-    if (maxRent) query.rent.$lte = maxRent;
+    const rentQuery: { $gte?: number; $lte?: number } = {};
+    if (minRent) rentQuery.$gte = minRent;
+    if (maxRent) rentQuery.$lte = maxRent;
+    query.rent = rentQuery;
   }
 
   if (roomType) {
@@ -278,7 +299,7 @@ ListingSchema.statics.searchListings = function(filters: any, options: any = {})
   }
 
   // Sort options
-  let sort: any = {};
+  let sort: Record<string, 1 | -1> = {};
   switch (sortBy) {
     case 'rent_asc':
       sort = { rent: 1 };
@@ -305,7 +326,7 @@ ListingSchema.statics.searchListings = function(filters: any, options: any = {})
 };
 
 // Pre-save middleware
-ListingSchema.pre('save', function(next) {
+ListingSchema.pre('save', function (next) {
   // Ensure only one primary image
   if (this.images && this.images.length > 0) {
     const primaryImages = this.images.filter(img => img.isPrimary);

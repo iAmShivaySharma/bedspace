@@ -6,9 +6,24 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "next lint",
+    "lint:fix": "next lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "type-check": "tsc --noEmit",
     "seed:admin": "node scripts/seed-admin.js",
-    "seed:data": "node scripts/seed-data.js"
+    "seed:users": "node scripts/seed-users.js",
+    "seed:data": "node scripts/seed-data.js",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -36,7 +51,6 @@
     "mongoose": "^8.18.1",
     "multer": "^2.0.2",
     "next": "^14.2.32",
-    "next-auth": "^4.24.11",
     "nodemailer": "^6.10.1",
     "postcss": "^8.5.6",
     "react": "^18.3.1",
@@ -57,8 +71,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.6",
+    "prettier": "^3.6.2",
     "typescript": "^5"
   }
 }

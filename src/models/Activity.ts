@@ -1,11 +1,22 @@
 import mongoose from 'mongoose';
 
+export interface IActivityDetails {
+  searchQuery?: string;
+  filters?: Record<string, unknown>;
+  resultsCount?: number;
+  listingId?: string;
+  bookingId?: string;
+  messageId?: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
 export interface IActivity extends mongoose.Document {
   userId: mongoose.Types.ObjectId;
   userRole: 'seeker' | 'provider' | 'admin';
   action: string;
   description: string;
-  details?: any;
+  details?: IActivityDetails;
   ipAddress?: string;
   userAgent?: string;
   createdAt: Date;
@@ -16,38 +27,37 @@ const ActivitySchema = new mongoose.Schema<IActivity>({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true
+    index: true,
   },
   userRole: {
     type: String,
     enum: ['seeker', 'provider', 'admin'],
     required: true,
-    index: true
+    index: true,
   },
   action: {
     type: String,
     required: true,
-    index: true
+    index: true,
   },
   description: {
     type: String,
-    required: true
+    required: true,
   },
   details: {
     type: mongoose.Schema.Types.Mixed,
-    default: {}
+    default: {},
   },
   ipAddress: {
-    type: String
+    type: String,
   },
   userAgent: {
-    type: String
+    type: String,
   },
   createdAt: {
     type: Date,
     default: Date.now,
-    index: true
-  }
+  },
 });
 
 // Indexes for better query performance
@@ -59,12 +69,12 @@ ActivitySchema.index({ action: 1, createdAt: -1 });
 ActivitySchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 
 // Static method to log activity
-ActivitySchema.statics.logActivity = async function(
+ActivitySchema.statics.logActivity = async function (
   userId: string,
   userRole: string,
   action: string,
   description: string,
-  details?: any,
+  details?: IActivityDetails,
   ipAddress?: string,
   userAgent?: string
 ) {
@@ -76,9 +86,9 @@ ActivitySchema.statics.logActivity = async function(
       description,
       details,
       ipAddress,
-      userAgent
+      userAgent,
     });
-    
+
     await activity.save();
     return activity;
   } catch (error) {
@@ -88,22 +98,22 @@ ActivitySchema.statics.logActivity = async function(
 };
 
 // Static method to get recent activities
-ActivitySchema.statics.getRecentActivities = async function(
+ActivitySchema.statics.getRecentActivities = async function (
   userId?: string,
   userRole?: string,
   limit: number = 20,
   skip: number = 0
 ) {
-  const query: any = {};
-  
+  const query: Record<string, unknown> = {};
+
   if (userId) {
     query.userId = userId;
   }
-  
+
   if (userRole) {
     query.userRole = userRole;
   }
-  
+
   return this.find(query)
     .populate('userId', 'name email')
     .sort({ createdAt: -1 })
@@ -113,12 +123,12 @@ ActivitySchema.statics.getRecentActivities = async function(
 };
 
 // Static method to get activity stats
-ActivitySchema.statics.getActivityStats = async function(
+ActivitySchema.statics.getActivityStats = async function (
   timeRange: 'today' | '7d' | '30d' = '7d'
 ) {
   const now = new Date();
   let startDate: Date;
-  
+
   switch (timeRange) {
     case 'today':
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -132,21 +142,21 @@ ActivitySchema.statics.getActivityStats = async function(
     default:
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   }
-  
+
   const stats = await this.aggregate([
     {
       $match: {
-        createdAt: { $gte: startDate }
-      }
+        createdAt: { $gte: startDate },
+      },
     },
     {
       $group: {
         _id: {
           action: '$action',
-          userRole: '$userRole'
+          userRole: '$userRole',
         },
-        count: { $sum: 1 }
-      }
+        count: { $sum: 1 },
+      },
     },
     {
       $group: {
@@ -155,16 +165,16 @@ ActivitySchema.statics.getActivityStats = async function(
         byRole: {
           $push: {
             role: '$_id.userRole',
-            count: '$count'
-          }
-        }
-      }
+            count: '$count',
+          },
+        },
+      },
     },
     {
-      $sort: { totalCount: -1 }
-    }
+      $sort: { totalCount: -1 },
+    },
   ]);
-  
+
   return stats;
 };
 
@@ -175,7 +185,7 @@ interface IActivityModel extends mongoose.Model<IActivity> {
     userRole: string,
     action: string,
     description: string,
-    details?: any,
+    details?: Record<string, unknown>,
     ipAddress?: string,
     userAgent?: string
   ): Promise<IActivity | null>;
@@ -185,14 +195,13 @@ interface IActivityModel extends mongoose.Model<IActivity> {
     userRole?: string,
     limit?: number,
     skip?: number
-  ): Promise<any[]>;
+  ): Promise<Record<string, unknown>[]>;
 
-  getActivityStats(
-    timeRange?: 'today' | '7d' | '30d'
-  ): Promise<any[]>;
+  getActivityStats(timeRange?: 'today' | '7d' | '30d'): Promise<Record<string, unknown>[]>;
 }
 
-const Activity = (mongoose.models.Activity as IActivityModel) ||
+const Activity =
+  (mongoose.models.Activity as IActivityModel) ||
   mongoose.model<IActivity, IActivityModel>('Activity', ActivitySchema);
 
 export default Activity;

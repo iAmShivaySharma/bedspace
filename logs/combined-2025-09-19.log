@@ -1,0 +1,2 @@
+{"action":"login","details":{"details":{},"ipAddress":"::1","userRole":"seeker"},"level":"\u001b[32minfo\u001b[39m","message":"\u001b[32mUser Activity\u001b[39m","timestamp":"2025-09-19 01:50:23:5023","type":"activity","userId":"68cc667d5f7749b800309a05"}
+{"duration":1171,"level":"\u001b[35mhttp\u001b[39m","message":"\u001b[35mAPI Request\u001b[39m","method":"POST","statusCode":200,"timestamp":"2025-09-19 01:50:23:5023","type":"api_request","url":"/api/auth/login","userId":"68cc667d5f7749b800309a05"}

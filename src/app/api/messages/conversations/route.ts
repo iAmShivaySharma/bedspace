@@ -1,24 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/middleware/auth';
+import { verifyAuth, AuthenticatedUser } from '@/middleware/auth';
 import { connectDB } from '@/lib/mongodb';
 import { logApiRequest, logError } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     logApiRequest('GET', '/api/messages/conversations', undefined, 200, Date.now() - startTime);
 
     // Verify authentication
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: authResult.error }, { status: 401 });
     }
 
-    const { user } = authResult;
+    const user = authResult.user as AuthenticatedUser;
     await connectDB();
 
     // Mock conversations data - in real implementation, you'd have a Messages/Conversations model
@@ -29,22 +26,22 @@ export async function GET(request: NextRequest) {
           id: 'user_002',
           name: 'Rajesh Kumar',
           avatar: '/images/avatar-1.jpg',
-          role: 'provider'
+          role: 'provider',
         },
         lastMessage: {
           content: 'The room is available from next month. Would you like to schedule a visit?',
           createdAt: '2024-01-20T15:30:00Z',
-          senderId: 'user_002'
+          senderId: 'user_002',
         },
         unreadCount: 2,
         messages: [
           {
             id: 'msg_001',
-            content: 'Hi, I\'m interested in your listing in Bandra West.',
+            content: "Hi, I'm interested in your listing in Bandra West.",
             senderId: user.id,
             receiverId: 'user_002',
             createdAt: '2024-01-20T14:00:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_002',
@@ -52,7 +49,7 @@ export async function GET(request: NextRequest) {
             senderId: 'user_002',
             receiverId: user.id,
             createdAt: '2024-01-20T14:15:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_003',
@@ -60,15 +57,16 @@ export async function GET(request: NextRequest) {
             senderId: user.id,
             receiverId: 'user_002',
             createdAt: '2024-01-20T14:30:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_004',
-            content: 'The room comes with AC, WiFi, and kitchen access. There\'s a metro station 5 minutes away.',
+            content:
+              "The room comes with AC, WiFi, and kitchen access. There's a metro station 5 minutes away.",
             senderId: 'user_002',
             receiverId: user.id,
             createdAt: '2024-01-20T15:00:00Z',
-            isRead: false
+            isRead: false,
           },
           {
             id: 'msg_005',
@@ -76,9 +74,9 @@ export async function GET(request: NextRequest) {
             senderId: 'user_002',
             receiverId: user.id,
             createdAt: '2024-01-20T15:30:00Z',
-            isRead: false
-          }
-        ]
+            isRead: false,
+          },
+        ],
       },
       {
         id: 'conv_002',
@@ -86,12 +84,12 @@ export async function GET(request: NextRequest) {
           id: 'user_003',
           name: 'Priya Sharma',
           avatar: '/images/avatar-2.jpg',
-          role: 'provider'
+          role: 'provider',
         },
         lastMessage: {
-          content: 'Thank you for your interest. I\'ll get back to you soon.',
+          content: "Thank you for your interest. I'll get back to you soon.",
           createdAt: '2024-01-19T11:20:00Z',
-          senderId: 'user_003'
+          senderId: 'user_003',
         },
         unreadCount: 0,
         messages: [
@@ -101,7 +99,7 @@ export async function GET(request: NextRequest) {
             senderId: user.id,
             receiverId: 'user_003',
             createdAt: '2024-01-19T10:00:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_007',
@@ -109,25 +107,25 @@ export async function GET(request: NextRequest) {
             senderId: 'user_003',
             receiverId: user.id,
             createdAt: '2024-01-19T10:30:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_008',
-            content: 'What are the house rules and what\'s included in the rent?',
+            content: "What are the house rules and what's included in the rent?",
             senderId: user.id,
             receiverId: 'user_003',
             createdAt: '2024-01-19T11:00:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_009',
-            content: 'Thank you for your interest. I\'ll get back to you soon.',
+            content: "Thank you for your interest. I'll get back to you soon.",
             senderId: 'user_003',
             receiverId: user.id,
             createdAt: '2024-01-19T11:20:00Z',
-            isRead: true
-          }
-        ]
+            isRead: true,
+          },
+        ],
       },
       {
         id: 'conv_003',
@@ -135,38 +133,39 @@ export async function GET(request: NextRequest) {
           id: 'user_004',
           name: 'Amit Patel',
           avatar: '/images/avatar-3.jpg',
-          role: 'provider'
+          role: 'provider',
         },
         lastMessage: {
           content: 'The studio apartment has been booked. Thank you!',
           createdAt: '2024-01-18T16:45:00Z',
-          senderId: 'user_004'
+          senderId: 'user_004',
         },
         unreadCount: 0,
         messages: [
           {
             id: 'msg_010',
-            content: 'Hello, I\'m interested in the luxury studio in Powai.',
+            content: "Hello, I'm interested in the luxury studio in Powai.",
             senderId: user.id,
             receiverId: 'user_004',
             createdAt: '2024-01-18T15:00:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_011',
-            content: 'Hi! The studio is beautiful and fully furnished. When are you looking to move in?',
+            content:
+              'Hi! The studio is beautiful and fully furnished. When are you looking to move in?',
             senderId: 'user_004',
             receiverId: user.id,
             createdAt: '2024-01-18T15:30:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_012',
-            content: 'I\'m looking to move in next month. Is it still available?',
+            content: "I'm looking to move in next month. Is it still available?",
             senderId: user.id,
             receiverId: 'user_004',
             createdAt: '2024-01-18T16:00:00Z',
-            isRead: true
+            isRead: true,
           },
           {
             id: 'msg_013',
@@ -174,10 +173,10 @@ export async function GET(request: NextRequest) {
             senderId: 'user_004',
             receiverId: user.id,
             createdAt: '2024-01-18T16:45:00Z',
-            isRead: true
-          }
-        ]
-      }
+            isRead: true,
+          },
+        ],
+      },
     ];
 
     const responseTime = Date.now() - startTime;
@@ -185,9 +184,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: mockConversations
+      data: mockConversations,
     });
-
   } catch (error) {
     logError('Error in GET /api/messages/conversations:', error);
     return NextResponse.json(

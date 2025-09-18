@@ -32,7 +32,7 @@ const generateMockNotifications = (userId: string, userRole: string) => {
       category: 'message',
       isRead: true,
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-    }
+    },
   ];
 
   // Add role-specific notifications
@@ -101,12 +101,14 @@ const generateMockNotifications = (userId: string, userRole: string) => {
     );
   }
 
-  return notifications.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return notifications.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 };
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // Verify authentication
     const authResult = await verifyAuth(request);
@@ -125,8 +127,10 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get('category') || 'all';
     const limit = parseInt(searchParams.get('limit') || '20');
 
+    const user = authResult.user as { id: string; role: string };
+
     // Generate mock notifications based on user
-    let notifications = generateMockNotifications(authResult.user.id, authResult.user.role);
+    let notifications = generateMockNotifications(user.id, user.role);
 
     // Apply filters
     if (filter === 'read') {
@@ -142,22 +146,21 @@ export async function GET(request: NextRequest) {
     // Apply limit
     notifications = notifications.slice(0, limit);
 
-    logApiRequest('GET', '/api/notifications', authResult.user.id, 200, Date.now() - startTime);
+    logApiRequest('GET', '/api/notifications', user.id, 200, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
       data: notifications,
-      total: notifications.length
+      total: notifications.length,
+    });
+  } catch (error) {
+    logError('Get notifications error', error, {
+      url: request.url,
+      method: 'GET',
     });
 
-  } catch (error) {
-    logError('Get notifications error', error, { 
-      url: request.url,
-      method: 'GET'
-    });
-    
     logApiRequest('GET', '/api/notifications', undefined, 500, Date.now() - startTime);
-    
+
     return NextResponse.json(
       { success: false, error: 'Failed to get notifications' },
       { status: 500 }
