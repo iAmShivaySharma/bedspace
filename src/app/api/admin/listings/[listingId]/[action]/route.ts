@@ -17,10 +17,7 @@ export async function POST(
     }
 
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     await connectDB();
@@ -61,14 +58,11 @@ export async function POST(
         break;
 
       default:
-        return NextResponse.json(
-          { success: false, error: 'Invalid action' },
-          { status: 400 }
-        );
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
 
     // In production, you would update the listing:
-    // await Listing.findByIdAndUpdate(listingId, { 
+    // await Listing.findByIdAndUpdate(listingId, {
     //   status: newStatus,
     //   updatedAt: new Date()
     // });
@@ -82,10 +76,9 @@ export async function POST(
       data: {
         listingId,
         newStatus,
-        action
-      }
+        action,
+      },
     });
-
   } catch (error) {
     console.error('Listing action error:', error);
     return NextResponse.json(

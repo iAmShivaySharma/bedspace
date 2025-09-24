@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    
+
     // Validate input
     const validationResult = resendOtpSchema.safeParse(body);
     if (!validationResult.success) {
@@ -32,9 +32,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email or phone
     const isEmail = identifier.includes('@');
-    const user = await User.findOne(
-      isEmail ? { email: identifier } : { phone: identifier }
-    );
+    const user = await User.findOne(isEmail ? { email: identifier } : { phone: identifier });
 
     if (!user) {
       return NextResponse.json(
@@ -106,7 +104,6 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error('Resend OTP error:', error);
     return NextResponse.json(

@@ -24,14 +24,20 @@ export async function GET(request: NextRequest) {
 
     // In production, you would query a Bookings collection
     // For now, return realistic mock data
-    const titles = ['Modern Private Room', 'Cozy Studio', 'Shared Space Near Metro', 'Luxury Apartment', 'Budget Friendly Room'];
+    const titles = [
+      'Modern Private Room',
+      'Cozy Studio',
+      'Shared Space Near Metro',
+      'Luxury Apartment',
+      'Budget Friendly Room',
+    ];
     const providers = ['John Smith', 'Sarah Johnson', 'Mike Wilson', 'Alice Brown', 'David Lee'];
     const statuses = ['pending', 'approved', 'rejected'];
 
     const bookings = Array.from({ length: Math.floor(Math.random() * 4) + 2 }, (_, i) => {
       const requestDate = new Date(Date.now() - Math.random() * 14 * 24 * 60 * 60 * 1000);
       const moveInDate = new Date(requestDate.getTime() + Math.random() * 30 * 24 * 60 * 60 * 1000);
-      
+
       return {
         id: i + 1,
         title: titles[Math.floor(Math.random() * titles.length)],
@@ -39,15 +45,14 @@ export async function GET(request: NextRequest) {
         status: statuses[Math.floor(Math.random() * statuses.length)],
         requestDate: requestDate.toISOString().split('T')[0],
         moveInDate: moveInDate.toISOString().split('T')[0],
-        price: Math.floor(Math.random() * 15000) + 5000 // 5000-20000
+        price: Math.floor(Math.random() * 15000) + 5000, // 5000-20000
       };
     });
 
     return NextResponse.json({
       success: true,
-      data: bookings
+      data: bookings,
     });
-
   } catch (error) {
     console.error('Get seeker bookings error:', error);
     return NextResponse.json(

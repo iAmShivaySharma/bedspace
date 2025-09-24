@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // For now, return mock data based on user role
     // In production, you would query a Notifications collection
     let count = 0;
-    
+
     switch (user.role) {
       case 'admin':
         // Admin might have provider verification notifications
@@ -38,9 +38,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { count }
+      data: { count },
     });
-
   } catch (error) {
     console.error('Get notifications count error:', error);
     return NextResponse.json(

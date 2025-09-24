@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { Provider } from '@/models/User';
 import { authenticate } from '@/middleware/auth';
-import { uploadFile } from '@/utils/upload';
+import { uploadFile } from '@/utils/upload-server';
 import { initializeBucket } from '@/lib/minio';
 
 export async function POST(request: NextRequest) {
@@ -31,10 +31,7 @@ export async function POST(request: NextRequest) {
     const documentType = formData.get('type') as string;
 
     if (!file) {
-      return NextResponse.json(
-        { success: false, error: 'No file provided' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'No file provided' }, { status: 400 });
     }
 
     if (!documentType) {
@@ -47,10 +44,7 @@ export async function POST(request: NextRequest) {
     // Validate document type
     const allowedTypes = ['id_card', 'business_license', 'address_proof', 'other'];
     if (!allowedTypes.includes(documentType)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid document type' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Invalid document type' }, { status: 400 });
     }
 
     // Validate file type and size
@@ -59,7 +53,10 @@ export async function POST(request: NextRequest) {
 
     if (!allowedFileTypes.includes(file.type)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid file type. Only JPEG, PNG, WebP, and PDF files are allowed' },
+        {
+          success: false,
+          error: 'Invalid file type. Only JPEG, PNG, WebP, and PDF files are allowed',
+        },
         { status: 400 }
       );
     }
@@ -82,10 +79,7 @@ export async function POST(request: NextRequest) {
     const provider = await Provider.findById(user._id);
 
     if (!provider) {
-      return NextResponse.json(
-        { success: false, error: 'Provider not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Provider not found' }, { status: 404 });
     }
 
     // Add document to provider's verification documents
@@ -124,7 +118,6 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-
   } catch (error) {
     console.error('Upload document error:', error);
     return NextResponse.json(
@@ -157,10 +150,7 @@ export async function GET(request: NextRequest) {
     const provider = await Provider.findById(user._id);
 
     if (!provider) {
-      return NextResponse.json(
-        { success: false, error: 'Provider not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Provider not found' }, { status: 404 });
     }
 
     return NextResponse.json(
@@ -173,12 +163,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error('Get documents error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to get documents' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to get documents' }, { status: 500 });
   }
 }

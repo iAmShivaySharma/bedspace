@@ -15,9 +15,9 @@ const mockListings = [
     provider: {
       name: 'John Smith',
       rating: 4.5,
-      verified: true
+      verified: true,
     },
-    coordinates: { lat: 19.0760, lng: 72.8777 }
+    coordinates: { lat: 19.076, lng: 72.8777 },
   },
   {
     id: '2',
@@ -32,9 +32,9 @@ const mockListings = [
     provider: {
       name: 'Sarah Johnson',
       rating: 4.8,
-      verified: true
+      verified: true,
     },
-    coordinates: { lat: 19.0596, lng: 72.8295 }
+    coordinates: { lat: 19.0596, lng: 72.8295 },
   },
   {
     id: '3',
@@ -49,9 +49,9 @@ const mockListings = [
     provider: {
       name: 'Mike Wilson',
       rating: 4.2,
-      verified: true
+      verified: true,
     },
-    coordinates: { lat: 19.1136, lng: 72.8697 }
+    coordinates: { lat: 19.1136, lng: 72.8697 },
   },
   {
     id: '4',
@@ -66,9 +66,9 @@ const mockListings = [
     provider: {
       name: 'Alice Brown',
       rating: 4.9,
-      verified: true
+      verified: true,
     },
-    coordinates: { lat: 19.1197, lng: 72.9056 }
+    coordinates: { lat: 19.1197, lng: 72.9056 },
   },
   {
     id: '5',
@@ -83,10 +83,10 @@ const mockListings = [
     provider: {
       name: 'Bob Davis',
       rating: 4.0,
-      verified: true
+      verified: true,
     },
-    coordinates: { lat: 19.2183, lng: 72.9781 }
-  }
+    coordinates: { lat: 19.2183, lng: 72.9781 },
+  },
 ];
 
 export async function GET(request: NextRequest) {
@@ -105,13 +105,14 @@ export async function GET(request: NextRequest) {
     // Filter listings based on search criteria
     let filteredListings = mockListings.filter(listing => {
       // Text search in title and description
-      const matchesQuery = !query || 
+      const matchesQuery =
+        !query ||
         listing.title.toLowerCase().includes(query.toLowerCase()) ||
         listing.description.toLowerCase().includes(query.toLowerCase());
 
       // Location search
-      const matchesLocation = !location || 
-        listing.location.toLowerCase().includes(location.toLowerCase());
+      const matchesLocation =
+        !location || listing.location.toLowerCase().includes(location.toLowerCase());
 
       // Price range
       const matchesPrice = listing.price >= minPrice && listing.price <= maxPrice;
@@ -123,11 +124,17 @@ export async function GET(request: NextRequest) {
       const matchesGender = !gender || listing.gender === 'any' || listing.gender === gender;
 
       // Amenities
-      const matchesAmenities = amenities.length === 0 || 
-        amenities.every(amenity => listing.amenities.includes(amenity));
+      const matchesAmenities =
+        amenities.length === 0 || amenities.every(amenity => listing.amenities.includes(amenity));
 
-      return matchesQuery && matchesLocation && matchesPrice && 
-             matchesType && matchesGender && matchesAmenities;
+      return (
+        matchesQuery &&
+        matchesLocation &&
+        matchesPrice &&
+        matchesType &&
+        matchesGender &&
+        matchesAmenities
+      );
     });
 
     // Pagination
@@ -151,7 +158,7 @@ export async function GET(request: NextRequest) {
           totalResults,
           totalPages,
           hasNextPage,
-          hasPrevPage
+          hasPrevPage,
         },
         filters: {
           query,
@@ -160,17 +167,13 @@ export async function GET(request: NextRequest) {
           maxPrice,
           type,
           gender,
-          amenities
-        }
-      }
+          amenities,
+        },
+      },
     });
-
   } catch (error) {
     console.error('Search error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Search failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Search failed' }, { status: 500 });
   }
 }
 
@@ -183,7 +186,7 @@ export async function POST(request: NextRequest) {
     // Mock location suggestions
     const locations = [
       'Downtown, Mumbai',
-      'Bandra, Mumbai', 
+      'Bandra, Mumbai',
       'Andheri, Mumbai',
       'Powai, Mumbai',
       'Thane, Mumbai',
@@ -191,18 +194,17 @@ export async function POST(request: NextRequest) {
       'Malad, Mumbai',
       'Borivali, Mumbai',
       'Kandivali, Mumbai',
-      'Goregaon, Mumbai'
+      'Goregaon, Mumbai',
     ];
 
-    const suggestions = locations.filter(location =>
-      location.toLowerCase().includes(query.toLowerCase())
-    ).slice(0, 5);
+    const suggestions = locations
+      .filter(location => location.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, 5);
 
     return NextResponse.json({
       success: true,
-      data: suggestions
+      data: suggestions,
     });
-
   } catch (error) {
     console.error('Location suggestions error:', error);
     return NextResponse.json(

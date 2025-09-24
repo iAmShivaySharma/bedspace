@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     // Update user's last login time
     await User.findByIdAndUpdate(user._id, {
-      lastLogin: new Date()
+      lastLogin: new Date(),
     });
 
     // In a production app, you might want to:
@@ -26,16 +26,18 @@ export async function POST(request: NextRequest) {
     // 2. Clear any session data
     // 3. Log the logout event
 
-    return NextResponse.json({
+    // Create response and clear the auth cookie
+    const response = NextResponse.json({
       success: true,
-      message: 'Logged out successfully'
+      message: 'Logged out successfully',
     });
 
+    // Clear the auth cookie
+    response.cookies.delete('auth-token');
+
+    return response;
   } catch (error) {
     console.error('Logout error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Logout failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Logout failed' }, { status: 500 });
   }
 }

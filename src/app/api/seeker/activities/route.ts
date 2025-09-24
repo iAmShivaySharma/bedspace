@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         title: `Searched for "Private room in ${['Bandra', 'Andheri', 'Powai', 'Thane'][Math.floor(Math.random() * 4)]}"`,
         time: `${Math.floor(Math.random() * 12) + 1} hours ago`,
         icon: 'Search',
-        color: 'text-blue-500'
+        color: 'text-blue-500',
       },
       {
         id: 2,
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         title: `Added "${['Cozy Studio', 'Modern Room', 'Shared Space', 'Private Apartment'][Math.floor(Math.random() * 4)]}" to favorites`,
         time: `${Math.floor(Math.random() * 3) + 1} day${Math.floor(Math.random() * 3) + 1 > 1 ? 's' : ''} ago`,
         icon: 'Heart',
-        color: 'text-red-500'
+        color: 'text-red-500',
       },
       {
         id: 3,
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         title: `Booking request sent to ${['John Smith', 'Sarah Johnson', 'Mike Wilson', 'Alice Brown'][Math.floor(Math.random() * 4)]}`,
         time: `${Math.floor(Math.random() * 5) + 2} days ago`,
         icon: 'Calendar',
-        color: 'text-green-500'
+        color: 'text-green-500',
       },
       {
         id: 4,
@@ -55,8 +55,8 @@ export async function GET(request: NextRequest) {
         title: `New message from ${['Provider', 'Landlord', 'Property Manager'][Math.floor(Math.random() * 3)]}`,
         time: `${Math.floor(Math.random() * 7) + 1} days ago`,
         icon: 'MessageCircle',
-        color: 'text-purple-500'
-      }
+        color: 'text-purple-500',
+      },
     ];
 
     // Randomize the order and take first 4
@@ -64,9 +64,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: shuffled
+      data: shuffled,
     });
-
   } catch (error) {
     console.error('Get seeker activities error:', error);
     return NextResponse.json(

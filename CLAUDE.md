@@ -1,0 +1,178 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## BedSpace - Room Rental Platform
+
+BedSpace is a Next.js-based platform for finding and renting bed spaces/rooms in Mumbai. It connects room seekers with providers and includes admin functionality.
+
+## Development Commands
+
+```bash
+# Development
+npm run dev                 # Start development server
+
+# Build & Production
+npm run build              # Build for production
+npm start                  # Start production server
+
+# Code Quality
+npm run lint               # Run ESLint
+npm run lint:fix           # Fix ESLint issues automatically
+npm run format             # Format code with Prettier
+npm run format:check       # Check formatting
+npm run type-check         # Run TypeScript type checking
+
+# Database Seeding
+npm run seed:admin         # Seed admin user
+npm run seed:users         # Seed test users
+npm run seed:data          # Seed sample data
+```
+
+## Architecture Overview
+
+### Tech Stack
+
+- **Frontend/Backend**: Next.js 14 with App Router
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JWT tokens with custom middleware
+- **File Storage**: MinIO (S3-compatible object storage)
+- **Styling**: Tailwind CSS with Radix UI components
+- **Email**: Nodemailer
+- **Logging**: Winston with daily rotate files
+- **Real-time**: Socket.IO
+
+### Key Directory Structure
+
+```
+src/
+├── app/                    # Next.js App Router pages
+│   ├── api/               # API route handlers
+│   │   ├── auth/          # Authentication endpoints
+│   │   ├── admin/         # Admin-specific endpoints
+│   │   ├── seeker/        # Seeker-specific endpoints
+│   │   └── providers/     # Provider-specific endpoints
+│   ├── admin/             # Admin dashboard pages
+│   ├── seeker/            # Seeker dashboard pages
+│   └── provider/          # Provider pages
+├── components/            # React components
+│   ├── forms/            # Form components
+│   ├── layout/           # Layout components
+│   └── ui/               # Reusable UI components (Radix)
+├── lib/                  # Core utilities and configurations
+│   ├── mongodb.ts        # Database connection with caching
+│   ├── logger.ts         # Winston logger setup
+│   ├── minio.ts          # MinIO client configuration
+│   └── activityLogger.ts # Activity tracking
+├── middleware/           # Authentication and request middleware
+├── models/              # Mongoose schema definitions
+├── types/               # TypeScript type definitions
+└── utils/               # Helper utilities
+```
+
+### User Roles & Architecture
+
+The platform supports three user roles with distinct access patterns:
+
+- **Seekers**: Search and book rooms
+- **Providers**: List and manage properties, handle bookings
+- **Admins**: Manage users, approve listings, system oversight
+
+### Authentication Flow
+
+- JWT-based authentication with Bearer tokens
+- Role-based access control with middleware functions
+- Multi-step verification (email/phone OTP)
+- Provider verification workflow for document approval
+
+### Database Models
+
+Key entities and relationships:
+
+- **User** (base model with role discrimination)
+- **Listing** (properties with images, geolocation)
+- **BookingRequest** (seeker-provider interactions)
+- **Message/Conversation** (real-time messaging)
+- **Activity** (audit logging)
+
+### API Patterns
+
+- Consistent `ApiResponse<T>` and `PaginatedResponse<T>` interfaces
+- Authentication middleware: `authenticate()`, `verifyAuth()`
+- Role checking: `requireRole()`, `requireVerification()`, `requireProviderApproval()`
+- Rate limiting utilities available
+
+### File Upload & Storage
+
+- MinIO integration for document and image storage
+- Provider verification documents
+- Listing images with primary image designation
+- Multer middleware for file handling
+
+## Environment Variables Required
+
+```bash
+# Database
+MONGODB_URI=mongodb://localhost:27017
+MONGODB_DB=bedspace
+
+# Authentication
+JWT_SECRET=your-jwt-secret-here
+
+# File Storage (MinIO)
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=your-access-key
+MINIO_SECRET_KEY=your-secret-key
+MINIO_BUCKET_NAME=bedspace-uploads
+
+# Email
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-app-password
+```
+
+## Development Notes
+
+- The project uses Husky with lint-staged for pre-commit hooks
+- TypeScript strict mode enabled
+- ESLint configured with Next.js and Prettier integration
+- Winston logging with daily rotation in `/logs` directory
+- Socket.IO server setup for real-time messaging
+- Activity logging system tracks all user actions
+- MongoDB connection uses caching for development hot reloads
+- Zod for runtime type validation in API routes
+
+## Important Code Patterns
+
+### API Route Authentication
+
+Use the authentication middleware functions from `src/middleware/auth.ts`:
+
+- `verifyAuth()` - Basic token validation
+- `createAuthMiddleware()` - Comprehensive middleware with role/verification checks
+- `requireRole()`, `requireVerification()`, `requireProviderApproval()` - Specific requirement checks
+
+### Response Format
+
+All API routes should use consistent response interfaces:
+
+- `ApiResponse<T>` for single responses
+- `PaginatedResponse<T>` for paginated data
+
+### Database Models
+
+Key models follow role-based inheritance:
+
+- User model has discriminator for seeker/provider/admin roles
+- Provider extends User with verification workflow
+- All models use Mongoose with proper TypeScript integration
+
+### File Upload Flow
+
+MinIO integration requires:
+
+1. Multer middleware for file handling
+2. MinIO client configuration in `src/lib/minio.ts`
+3. File metadata stored in database models

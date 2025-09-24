@@ -31,11 +31,9 @@ export default function FavoritesPage() {
   const fetchFavorites = async () => {
     try {
       const response = await fetch('/api/seeker/favorites', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        credentials: 'include',
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setFavorites(data.data || []);
@@ -51,11 +49,9 @@ export default function FavoritesPage() {
     try {
       const response = await fetch(`/api/seeker/favorites/${listingId}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        credentials: 'include',
       });
-      
+
       if (response.ok) {
         setFavorites(favorites.filter(fav => fav.id !== listingId));
       }
@@ -66,25 +62,29 @@ export default function FavoritesPage() {
 
   const getAmenityIcon = (amenity: string) => {
     switch (amenity.toLowerCase()) {
-      case 'wifi': return <Wifi className="h-4 w-4" />;
-      case 'parking': return <Car className="h-4 w-4" />;
-      case 'kitchen': return <Coffee className="h-4 w-4" />;
-      default: return null;
+      case 'wifi':
+        return <Wifi className='h-4 w-4' />;
+      case 'parking':
+        return <Car className='h-4 w-4' />;
+      case 'kitchen':
+        return <Coffee className='h-4 w-4' />;
+      default:
+        return null;
     }
   };
 
   if (loading) {
     return (
-      <DashboardLayout title="Favorite Listings">
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <div className="h-48 bg-gray-200 rounded-t-lg"></div>
-                <CardContent className="p-4">
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded mb-4"></div>
-                  <div className="h-6 bg-gray-200 rounded"></div>
+      <DashboardLayout title='Favorite Listings'>
+        <div className='p-6 space-y-6'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <Card key={i} className='animate-pulse'>
+                <div className='h-48 bg-gray-200 rounded-t-lg'></div>
+                <CardContent className='p-4'>
+                  <div className='h-4 bg-gray-200 rounded mb-2'></div>
+                  <div className='h-3 bg-gray-200 rounded mb-4'></div>
+                  <div className='h-6 bg-gray-200 rounded'></div>
                 </CardContent>
               </Card>
             ))}
@@ -95,13 +95,13 @@ export default function FavoritesPage() {
   }
 
   return (
-    <DashboardLayout title="Favorite Listings">
-      <div className="p-6 space-y-6">
+    <DashboardLayout title='Favorite Listings'>
+      <div className='p-6 space-y-6'>
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className='flex justify-between items-center'>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Favorites</h1>
-            <p className="text-gray-600">
+            <h1 className='text-2xl font-bold text-gray-900'>My Favorites</h1>
+            <p className='text-gray-600'>
               {favorites.length} saved listing{favorites.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -109,92 +109,92 @@ export default function FavoritesPage() {
 
         {/* Favorites Grid */}
         {favorites.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className='text-center py-12'>
             <CardContent>
-              <Heart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No favorites yet</h3>
-              <p className="text-gray-600 mb-4">
+              <Heart className='h-16 w-16 text-gray-300 mx-auto mb-4' />
+              <h3 className='text-lg font-semibold text-gray-900 mb-2'>No favorites yet</h3>
+              <p className='text-gray-600 mb-4'>
                 Start exploring and save listings you love to see them here.
               </p>
               <Button>
-                <a href="/search">Browse Listings</a>
+                <a href='/search'>Browse Listings</a>
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {favorites.map((listing) => (
-              <Card key={listing.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                <div className="relative">
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {favorites.map(listing => (
+              <Card key={listing.id} className='overflow-hidden hover:shadow-lg transition-shadow'>
+                <div className='relative'>
                   <img
                     src={listing.image || '/images/placeholder-room.jpg'}
                     alt={listing.title}
-                    className="w-full h-48 object-cover"
+                    className='w-full h-48 object-cover'
                   />
-                  <div className="absolute top-2 right-2">
+                  <div className='absolute top-2 right-2'>
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant='ghost'
+                      size='sm'
                       onClick={() => removeFavorite(listing.id)}
-                      className="bg-white/80 hover:bg-white text-red-500 hover:text-red-600"
+                      className='bg-white/80 hover:bg-white text-red-500 hover:text-red-600'
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className='h-4 w-4' />
                     </Button>
                   </div>
-                  <div className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-medium ${
-                    listing.status === 'available' 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
-                  }`}>
+                  <div
+                    className={`absolute top-2 left-2 px-2 py-1 rounded text-xs font-medium ${
+                      listing.status === 'available'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
                     {listing.status === 'available' ? 'Available' : 'Unavailable'}
                   </div>
                 </div>
-                
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-gray-900 line-clamp-1">
-                      {listing.title}
-                    </h3>
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Star className="h-4 w-4 text-yellow-400 mr-1" />
+
+                <CardContent className='p-4'>
+                  <div className='flex justify-between items-start mb-2'>
+                    <h3 className='font-semibold text-gray-900 line-clamp-1'>{listing.title}</h3>
+                    <div className='flex items-center text-sm text-gray-600'>
+                      <Star className='h-4 w-4 text-yellow-400 mr-1' />
                       {listing.rating} ({listing.reviewCount})
                     </div>
                   </div>
-                  
-                  <div className="flex items-center text-gray-600 mb-2">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    <span className="text-sm line-clamp-1">{listing.location}</span>
+
+                  <div className='flex items-center text-gray-600 mb-2'>
+                    <MapPin className='h-4 w-4 mr-1' />
+                    <span className='text-sm line-clamp-1'>{listing.location}</span>
                   </div>
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-lg font-bold text-gray-900">
+
+                  <div className='flex items-center justify-between mb-3'>
+                    <div className='text-lg font-bold text-gray-900'>
                       ₹{listing.price.toLocaleString()}/month
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className='text-sm text-gray-500'>
                       Saved {new Date(listing.savedDate).toLocaleDateString()}
                     </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex space-x-2">
-                      {listing.amenities.slice(0, 3).map((amenity) => (
-                        <div key={amenity} className="flex items-center text-gray-600">
+
+                  <div className='flex items-center justify-between mb-3'>
+                    <div className='flex space-x-2'>
+                      {listing.amenities.slice(0, 3).map(amenity => (
+                        <div key={amenity} className='flex items-center text-gray-600'>
                           {getAmenityIcon(amenity)}
                         </div>
                       ))}
                       {listing.amenities.length > 3 && (
-                        <span className="text-sm text-gray-500">
+                        <span className='text-sm text-gray-500'>
                           +{listing.amenities.length - 3} more
                         </span>
                       )}
                     </div>
                   </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button className="flex-1" size="sm">
+
+                  <div className='flex space-x-2'>
+                    <Button className='flex-1' size='sm'>
                       View Details
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button variant='outline' size='sm'>
                       Contact
                     </Button>
                   </div>

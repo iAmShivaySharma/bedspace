@@ -39,8 +39,8 @@ export interface IProvider extends IUser {
 export interface IVerificationDocument {
   _id: string;
   type: 'id_card' | 'business_license' | 'address_proof' | 'other';
-  fileName: string;
-  fileUrl: string;
+  fileName?: string;
+  fileUrl?: string;
   uploadedAt: Date;
   status: 'pending' | 'approved' | 'rejected';
   rejectionReason?: string;
@@ -56,11 +56,11 @@ const VerificationDocumentSchema = new Schema<IVerificationDocument>({
   },
   fileName: {
     type: String,
-    required: true,
+    required: false,
   },
   fileUrl: {
     type: String,
-    required: true,
+    required: false,
   },
   uploadedAt: {
     type: Date,
@@ -79,63 +79,66 @@ const VerificationDocumentSchema = new Schema<IVerificationDocument>({
   reviewedAt: Date,
 });
 
-const UserSchema = new Schema<IUser>({
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-    index: true,
+const UserSchema = new Schema<IUser>(
+  {
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
+    phone: {
+      type: String,
+      sparse: true,
+      unique: true,
+      trim: true,
+      index: true,
+    },
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+    },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 100,
+    },
+    role: {
+      type: String,
+      enum: Object.values(USER_ROLES),
+      required: true,
+      index: true,
+    },
+    avatar: String,
+    isVerified: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    isPhoneVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationToken: String,
+    phoneVerificationToken: String,
+    otpExpiry: Date,
+    resetPasswordToken: String,
+    resetPasswordExpiry: Date,
+    lastLogin: Date,
   },
-  phone: {
-    type: String,
-    sparse: true,
-    unique: true,
-    trim: true,
-    index: true,
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6,
-  },
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 100,
-  },
-  role: {
-    type: String,
-    enum: Object.values(USER_ROLES),
-    required: true,
-    index: true,
-  },
-  avatar: String,
-  isVerified: {
-    type: Boolean,
-    default: false,
-    index: true,
-  },
-  isEmailVerified: {
-    type: Boolean,
-    default: false,
-  },
-  isPhoneVerified: {
-    type: Boolean,
-    default: false,
-  },
-  emailVerificationToken: String,
-  phoneVerificationToken: String,
-  otpExpiry: Date,
-  resetPasswordToken: String,
-  resetPasswordExpiry: Date,
-  lastLogin: Date,
-}, {
-  timestamps: true,
-  discriminatorKey: 'role',
-});
+  {
+    timestamps: true,
+    discriminatorKey: 'role',
+  }
+);
 
 // Provider-specific schema
 const ProviderSchema = new Schema<IProvider>({
@@ -187,26 +190,30 @@ UserSchema.index({ createdAt: -1 });
 UserSchema.index({ isVerified: 1, role: 1 });
 
 // Virtual for full name
-UserSchema.virtual('fullName').get(function() {
+UserSchema.virtual('fullName').get(function () {
   return this.name;
 });
 
 // Method to check if user is verified
-UserSchema.methods.isFullyVerified = function() {
-  return this.isEmailVerified && (this.role !== 'provider' || this.verificationStatus === 'approved');
+UserSchema.methods.isFullyVerified = function () {
+  return (
+    this.isEmailVerified && (this.role !== 'provider' || this.verificationStatus === 'approved')
+  );
 };
 
 // Static method to find by email or phone
-UserSchema.statics.findByIdentifier = function(identifier: string) {
+UserSchema.statics.findByIdentifier = function (identifier: string) {
   const isEmail = identifier.includes('@');
   return this.findOne(isEmail ? { email: identifier } : { phone: identifier });
 };
 
 // Pre-save middleware to update verification status
-UserSchema.pre('save', function(next) {
+UserSchema.pre('save', function (next) {
   if (this.isModified('isEmailVerified') || this.isModified('isPhoneVerified')) {
     const userData = this as any; // Type assertion for verificationStatus
-    this.isVerified = this.isEmailVerified && (this.role !== 'provider' || userData.verificationStatus === 'approved');
+    this.isVerified =
+      this.isEmailVerified &&
+      (this.role !== 'provider' || userData.verificationStatus === 'approved');
   }
   next();
 });

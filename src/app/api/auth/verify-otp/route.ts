@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    
+
     // Validate input
     const validationResult = otpSchema.safeParse(body);
     if (!validationResult.success) {
@@ -28,9 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email or phone
     const isEmail = identifier.includes('@');
-    const user = await User.findOne(
-      isEmail ? { email: identifier } : { phone: identifier }
-    );
+    const user = await User.findOne(isEmail ? { email: identifier } : { phone: identifier });
 
     if (!user) {
       return NextResponse.json(
@@ -67,11 +65,13 @@ export async function POST(request: NextRequest) {
     user.isEmailVerified = true;
     user.emailVerificationToken = undefined;
     user.otpExpiry = undefined;
-    
+
     // Update overall verification status
     const userWithVerification = user as any; // Type assertion for verificationStatus
-    user.isVerified = user.isEmailVerified && (user.role !== 'provider' || userWithVerification.verificationStatus === 'approved');
-    
+    user.isVerified =
+      user.isEmailVerified &&
+      (user.role !== 'provider' || userWithVerification.verificationStatus === 'approved');
+
     await user.save();
 
     // Send welcome email
@@ -112,18 +112,28 @@ export async function POST(request: NextRequest) {
       userDataExtended.totalListings = providerData.totalListings;
     }
 
-    return NextResponse.json(
+    // Create response with cookie
+    const response = NextResponse.json(
       {
         success: true,
         message: 'Email verified successfully',
         data: {
           user: userData,
-          token,
         },
       },
       { status: 200 }
     );
 
+    // Set httpOnly cookie with the token
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     console.error('OTP verification error:', error);
     return NextResponse.json(

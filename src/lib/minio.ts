@@ -1,11 +1,11 @@
 import { Client } from 'minio';
 
 const minioClient = new Client({
-  endPoint: process.env.MINIO_ENDPOINT || 'localhost',
-  port: parseInt(process.env.MINIO_PORT || '9000'),
-  useSSL: process.env.MINIO_USE_SSL === 'true',
-  accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-  secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+  endPoint: process.env.MINIO_ENDPOINT || 'minio-cwg0go8cgkskkk4o4k4gk0o8.pinkyfoundation.com',
+  port: parseInt(process.env.MINIO_PORT || '443'),
+  useSSL: process.env.MINIO_USE_SSL !== 'false', // Default to true for HTTPS
+  accessKey: process.env.MINIO_ACCESS_KEY || 'RqUc8GIbxw56P7XM',
+  secretKey: process.env.MINIO_SECRET_KEY || 'OLNDU1qc3DfEJ2PG2MSL8FqTp86RGphC',
 });
 
 const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || 'bedspace-images';
@@ -17,7 +17,7 @@ export const initializeBucket = async () => {
     if (!bucketExists) {
       await minioClient.makeBucket(BUCKET_NAME, 'us-east-1');
       console.log(`Bucket ${BUCKET_NAME} created successfully`);
-      
+
       // Set bucket policy to allow public read access for images
       const policy = {
         Version: '2012-10-17',
@@ -30,7 +30,7 @@ export const initializeBucket = async () => {
           },
         ],
       };
-      
+
       await minioClient.setBucketPolicy(BUCKET_NAME, JSON.stringify(policy));
     }
   } catch (error) {

@@ -19,65 +19,68 @@ export interface IBookingRequest extends Document {
   updatedAt: Date;
 }
 
-const BookingRequestSchema = new Schema<IBookingRequest>({
-  listingId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Listing',
-    required: true,
-    index: true,
+const BookingRequestSchema = new Schema<IBookingRequest>(
+  {
+    listingId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Listing',
+      required: true,
+      index: true,
+    },
+    seekerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    providerId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    status: {
+      type: String,
+      enum: Object.values(BOOKING_STATUS),
+      default: BOOKING_STATUS.PENDING,
+      index: true,
+    },
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 500,
+    },
+    requestedDate: {
+      type: Date,
+      required: true,
+      index: true,
+    },
+    responseMessage: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    respondedAt: Date,
+    respondedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    cancelledAt: Date,
+    cancelledBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
   },
-  seekerId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true,
-  },
-  providerId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true,
-  },
-  status: {
-    type: String,
-    enum: Object.values(BOOKING_STATUS),
-    default: BOOKING_STATUS.PENDING,
-    index: true,
-  },
-  message: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 500,
-  },
-  requestedDate: {
-    type: Date,
-    required: true,
-    index: true,
-  },
-  responseMessage: {
-    type: String,
-    trim: true,
-    maxlength: 500,
-  },
-  respondedAt: Date,
-  respondedBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  cancelledAt: Date,
-  cancelledBy: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  cancellationReason: {
-    type: String,
-    trim: true,
-    maxlength: 500,
-  },
-}, {
-  timestamps: true,
-});
+  {
+    timestamps: true,
+  }
+);
 
 // Compound indexes for better query performance
 BookingRequestSchema.index({ seekerId: 1, status: 1 });
@@ -89,16 +92,16 @@ BookingRequestSchema.index({ requestedDate: 1, status: 1 });
 // Prevent duplicate booking requests for the same listing by the same seeker
 BookingRequestSchema.index(
   { listingId: 1, seekerId: 1 },
-  { 
+  {
     unique: true,
-    partialFilterExpression: { 
-      status: { $in: ['pending', 'approved'] } 
-    }
+    partialFilterExpression: {
+      status: { $in: ['pending', 'approved'] },
+    },
   }
 );
 
 // Virtual for response time (how long it took to respond)
-BookingRequestSchema.virtual('responseTime').get(function() {
+BookingRequestSchema.virtual('responseTime').get(function () {
   if (this.respondedAt && this.createdAt) {
     return this.respondedAt.getTime() - this.createdAt.getTime();
   }
@@ -106,14 +109,14 @@ BookingRequestSchema.virtual('responseTime').get(function() {
 });
 
 // Virtual for days until requested date
-BookingRequestSchema.virtual('daysUntilRequestedDate').get(function() {
+BookingRequestSchema.virtual('daysUntilRequestedDate').get(function () {
   const now = new Date();
   const diffTime = this.requestedDate.getTime() - now.getTime();
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 });
 
 // Method to approve booking
-BookingRequestSchema.methods.approve = function(respondedBy: string, responseMessage?: string) {
+BookingRequestSchema.methods.approve = function (respondedBy: string, responseMessage?: string) {
   this.status = BOOKING_STATUS.APPROVED;
   this.respondedAt = new Date();
   this.respondedBy = respondedBy;
@@ -124,7 +127,7 @@ BookingRequestSchema.methods.approve = function(respondedBy: string, responseMes
 };
 
 // Method to reject booking
-BookingRequestSchema.methods.reject = function(respondedBy: string, responseMessage?: string) {
+BookingRequestSchema.methods.reject = function (respondedBy: string, responseMessage?: string) {
   this.status = BOOKING_STATUS.REJECTED;
   this.respondedAt = new Date();
   this.respondedBy = respondedBy;
@@ -135,7 +138,7 @@ BookingRequestSchema.methods.reject = function(respondedBy: string, responseMess
 };
 
 // Method to cancel booking
-BookingRequestSchema.methods.cancel = function(cancelledBy: string, cancellationReason?: string) {
+BookingRequestSchema.methods.cancel = function (cancelledBy: string, cancellationReason?: string) {
   this.status = BOOKING_STATUS.CANCELLED;
   this.cancelledAt = new Date();
   this.cancelledBy = cancelledBy;
@@ -146,7 +149,7 @@ BookingRequestSchema.methods.cancel = function(cancelledBy: string, cancellation
 };
 
 // Static method to get booking statistics
-BookingRequestSchema.statics.getStats = function(providerId?: string) {
+BookingRequestSchema.statics.getStats = function (providerId?: string) {
   const matchStage: any = {};
   if (providerId) {
     matchStage.providerId = new mongoose.Types.ObjectId(providerId);
@@ -176,9 +179,13 @@ BookingRequestSchema.statics.getStats = function(providerId?: string) {
 };
 
 // Static method to get recent bookings
-BookingRequestSchema.statics.getRecentBookings = function(userId: string, userRole: string, limit: number = 10) {
+BookingRequestSchema.statics.getRecentBookings = function (
+  userId: string,
+  userRole: string,
+  limit: number = 10
+) {
   const matchStage: any = {};
-  
+
   if (userRole === 'seeker') {
     matchStage.seekerId = new mongoose.Types.ObjectId(userId);
   } else if (userRole === 'provider') {
@@ -194,12 +201,12 @@ BookingRequestSchema.statics.getRecentBookings = function(userId: string, userRo
 };
 
 // Pre-save middleware to update listing booking count
-BookingRequestSchema.pre('save', async function(next) {
+BookingRequestSchema.pre('save', async function (next) {
   if (this.isModified('status') && this.status === BOOKING_STATUS.APPROVED) {
     try {
       const Listing = mongoose.model('Listing');
       await Listing.findByIdAndUpdate(this.listingId, {
-        $inc: { bookingCount: 1 }
+        $inc: { bookingCount: 1 },
       });
     } catch (error) {
       console.error('Error updating listing booking count:', error);
@@ -208,6 +215,8 @@ BookingRequestSchema.pre('save', async function(next) {
   next();
 });
 
-const BookingRequest = mongoose.models.BookingRequest || mongoose.model<IBookingRequest>('BookingRequest', BookingRequestSchema);
+const BookingRequest =
+  mongoose.models.BookingRequest ||
+  mongoose.model<IBookingRequest>('BookingRequest', BookingRequestSchema);
 
 export { BookingRequest };

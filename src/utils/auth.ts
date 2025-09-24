@@ -23,7 +23,10 @@ export const hashPassword = async (password: string): Promise<string> => {
 };
 
 // Compare password
-export const comparePassword = async (password: string, hashedPassword: string): Promise<boolean> => {
+export const comparePassword = async (
+  password: string,
+  hashedPassword: string
+): Promise<boolean> => {
   return await bcrypt.compare(password, hashedPassword);
 };
 
@@ -62,7 +65,7 @@ export const generateRandomString = (length: number = 32): string => {
 export const getUserFromToken = (token: string): Partial<User> | null => {
   const payload = verifyToken(token);
   if (!payload) return null;
-  
+
   return {
     _id: payload.userId,
     email: payload.email,
@@ -73,11 +76,11 @@ export const getUserFromToken = (token: string): Partial<User> | null => {
 // Check if user has required role
 export const hasRole = (user: Partial<User>, requiredRole: string | string[]): boolean => {
   if (!user.role) return false;
-  
+
   if (Array.isArray(requiredRole)) {
     return requiredRole.includes(user.role);
   }
-  
+
   return user.role === requiredRole;
 };
 

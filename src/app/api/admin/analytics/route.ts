@@ -15,10 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     await connectDB();
@@ -34,11 +31,16 @@ export async function GET(request: NextRequest) {
     // Generate realistic analytics data based on time range
     const getRangeMultiplier = (range: string) => {
       switch (range) {
-        case '7d': return 0.2;
-        case '30d': return 1;
-        case '90d': return 3;
-        case '1y': return 12;
-        default: return 1;
+        case '7d':
+          return 0.2;
+        case '30d':
+          return 1;
+        case '90d':
+          return 3;
+        case '1y':
+          return 12;
+        default:
+          return 1;
       }
     };
 
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
 
     // Get users created in the time range
     const newUsersInRange = await User.countDocuments({
-      createdAt: { $gte: rangeStart }
+      createdAt: { $gte: rangeStart },
     });
 
     // Calculate growth percentages based on real data
@@ -74,12 +76,15 @@ export async function GET(request: NextRequest) {
     previousPeriodStart.setTime(rangeStart.getTime() - periodLength);
 
     const previousPeriodUsers = await User.countDocuments({
-      createdAt: { $gte: previousPeriodStart, $lt: rangeStart }
+      createdAt: { $gte: previousPeriodStart, $lt: rangeStart },
     });
 
-    const userGrowth = previousPeriodUsers > 0
-      ? ((newUsersInRange - previousPeriodUsers) / previousPeriodUsers) * 100
-      : newUsersInRange > 0 ? 100 : 0;
+    const userGrowth =
+      previousPeriodUsers > 0
+        ? ((newUsersInRange - previousPeriodUsers) / previousPeriodUsers) * 100
+        : newUsersInRange > 0
+          ? 100
+          : 0;
 
     // Real analytics data based on actual database
     const analytics = {
@@ -91,56 +96,58 @@ export async function GET(request: NextRequest) {
         activeUsers: Math.floor(totalUsers * 0.65), // 65% of total users are active
         userGrowth: Math.round(userGrowth * 100) / 100,
         averageRating: 4.3 + (totalProviders > 10 ? Math.random() * 0.4 : 0), // Better ratings with more providers
-        ratingChange: Math.max(-5, Math.min(5, userGrowth * 0.1))
+        ratingChange: Math.max(-5, Math.min(5, userGrowth * 0.1)),
       },
       userMetrics: {
         newUsers: newUsersInRange,
         activeUsers: Math.floor(totalUsers * 0.65),
         retentionRate: Math.max(60, Math.min(95, 75 + (totalUsers > 100 ? 10 : 0))), // Better retention with scale
-        conversionRate: Math.max(10, Math.min(30, 18 + (totalProviders / totalSeekers) * 20)) // Higher conversion with more providers
+        conversionRate: Math.max(10, Math.min(30, 18 + (totalProviders / totalSeekers) * 20)), // Higher conversion with more providers
       },
       listingMetrics: {
         totalListings: Math.floor(totalProviders * 2.1), // Average 2.1 listings per provider
         activeListings: Math.floor(totalProviders * 1.6), // 76% of listings are active
         averagePrice: Math.floor(12000 + (totalProviders > 50 ? 3000 : 1500)), // Higher prices in mature markets
-        occupancyRate: Math.max(55, Math.min(85, 70 + (totalUsers > 200 ? 10 : 0))) // Better occupancy with more users
+        occupancyRate: Math.max(55, Math.min(85, 70 + (totalUsers > 200 ? 10 : 0))), // Better occupancy with more users
       },
       bookingMetrics: {
         totalBookings: Math.floor(totalSeekers * 0.4), // 40% of seekers have bookings
         completedBookings: Math.floor(totalSeekers * 0.32), // 80% completion rate
         cancelledBookings: Math.floor(totalSeekers * 0.04), // 10% cancellation rate
-        averageBookingValue: Math.floor(35000 + (totalProviders > 30 ? 15000 : 8000)) // Higher value with more options
+        averageBookingValue: Math.floor(35000 + (totalProviders > 30 ? 15000 : 8000)), // Higher value with more options
       },
       topPerformers: {
         topProviders: await User.find({ role: 'provider' })
           .select('name')
           .limit(5)
-          .then(providers => providers.map((provider, index) => ({
-            name: provider.name,
-            bookings: Math.floor((25 - index * 3) * (totalUsers / 100)), // Scale with user base
-            revenue: Math.floor((200000 - index * 30000) * (totalUsers / 100)),
-            rating: Math.round((4.8 - index * 0.1) * 10) / 10
-          }))),
+          .then(providers =>
+            providers.map((provider, index) => ({
+              name: provider.name,
+              bookings: Math.floor((25 - index * 3) * (totalUsers / 100)), // Scale with user base
+              revenue: Math.floor((200000 - index * 30000) * (totalUsers / 100)),
+              rating: Math.round((4.8 - index * 0.1) * 10) / 10,
+            }))
+          ),
         topListings: [
           'Luxury Studio in Bandra',
           'Modern Room Near Metro',
           'Cozy Space in Powai',
           'Premium Apartment in Worli',
-          'Budget Friendly Room'
+          'Budget Friendly Room',
         ].map((title, index) => ({
           title,
-          location: ['Bandra West', 'Andheri East', 'Powai', 'Worli', 'Thane West'][index] + ', Mumbai',
+          location:
+            ['Bandra West', 'Andheri East', 'Powai', 'Worli', 'Thane West'][index] + ', Mumbai',
           bookings: Math.floor((18 - index * 2) * (totalUsers / 150)), // Scale with user base
-          revenue: Math.floor((350000 - index * 50000) * (totalUsers / 150))
-        }))
-      }
+          revenue: Math.floor((350000 - index * 50000) * (totalUsers / 150)),
+        })),
+      },
     };
 
     return NextResponse.json({
       success: true,
-      data: analytics
+      data: analytics,
     });
-
   } catch (error) {
     console.error('Get analytics error:', error);
     return NextResponse.json(

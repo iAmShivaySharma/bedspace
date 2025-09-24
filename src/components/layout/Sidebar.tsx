@@ -2,14 +2,14 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { 
-  Home, 
-  Search, 
-  Plus, 
-  MessageCircle, 
-  User, 
-  Settings, 
-  Shield, 
+import {
+  Home,
+  Search,
+  Plus,
+  MessageCircle,
+  User,
+  Settings,
+  Shield,
   BarChart3,
   Building,
   Calendar,
@@ -20,7 +20,7 @@ import {
   ChevronRight,
   Users,
   FileText,
-  Bell
+  Bell,
 } from 'lucide-react';
 
 interface User {
@@ -29,7 +29,7 @@ interface User {
   email: string;
   role: string;
   isVerified: boolean;
-  verificationStatus?: string;
+  verificationStatus?: 'pending' | 'approved' | 'rejected';
 }
 
 interface SidebarProps {
@@ -74,16 +74,42 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
     }
 
     if (user.role === 'provider') {
+      const isVerified = user.verificationStatus === 'approved';
       return [
-        { name: 'Dashboard', href: '/provider/dashboard', icon: Home },
-        { name: 'My Listings', href: '/provider/listings', icon: Building },
-        { name: 'Add Listing', href: '/provider/listings/new', icon: Plus, requiresVerification: true },
-        { name: 'Bookings', href: '/provider/bookings', icon: Calendar },
+        { name: 'Dashboard', href: '/dashboard', icon: Home },
+        {
+          name: 'My Listings',
+          href: '/provider/listings',
+          icon: Building,
+          requiresVerification: true,
+        },
+        {
+          name: 'Add Listing',
+          href: '/provider/listings/new',
+          icon: Plus,
+          requiresVerification: true,
+        },
+        {
+          name: 'Bookings',
+          href: '/provider/bookings',
+          icon: Calendar,
+          requiresVerification: true,
+        },
         { name: 'Messages', href: '/messages', icon: MessageCircle, badge: 2 },
-        { name: 'Analytics', href: '/provider/analytics', icon: BarChart3 },
+        {
+          name: 'Analytics',
+          href: '/provider/analytics',
+          icon: BarChart3,
+          requiresVerification: true,
+        },
         { name: 'Verification', href: '/provider/verification', icon: Shield },
         { name: 'Profile', href: '/profile', icon: User },
-        { name: 'Payments', href: '/provider/payments', icon: CreditCard },
+        {
+          name: 'Payments',
+          href: '/provider/payments',
+          icon: CreditCard,
+          requiresVerification: true,
+        },
       ];
     }
 
@@ -105,7 +131,11 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
   const navItems = getNavItems();
 
   const handleNavClick = (href: string, requiresVerification?: boolean) => {
-    if (requiresVerification && !user.isVerified) {
+    if (
+      requiresVerification &&
+      user.role === 'provider' &&
+      user.verificationStatus !== 'approved'
+    ) {
       router.push('/provider/verification');
       return;
     }
@@ -152,37 +182,37 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-all duration-300 z-30 ${
-        isOpen ? 'w-64' : 'w-16'
-      } hidden lg:block`}>
-        
+      <div
+        className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-all duration-300 z-30 ${
+          isOpen ? 'w-64' : 'w-16'
+        } hidden lg:block`}
+      >
         {/* Toggle Button */}
-        <div className="absolute -right-3 top-6 z-40">
+        <div className='absolute -right-3 top-6 z-40'>
           <Button
-            variant="outline"
-            size="sm"
+            variant='outline'
+            size='sm'
             onClick={onToggle}
-            className="h-6 w-6 rounded-full p-0 bg-white border-gray-300 shadow-sm"
+            className='h-6 w-6 rounded-full p-0 bg-white border-gray-300 shadow-sm'
           >
-            {isOpen ? (
-              <ChevronLeft className="h-3 w-3" />
-            ) : (
-              <ChevronRight className="h-3 w-3" />
-            )}
+            {isOpen ? <ChevronLeft className='h-3 w-3' /> : <ChevronRight className='h-3 w-3' />}
           </Button>
         </div>
 
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
-          {navItems.map((item) => {
+        <nav className='p-4 space-y-2'>
+          {navItems.map(item => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            const disabled = item.requiresVerification && !user.isVerified;
-            
+            const disabled =
+              item.requiresVerification &&
+              user.role === 'provider' &&
+              user.verificationStatus !== 'approved';
+
             return (
               <Button
                 key={item.name}
-                variant={active ? "default" : "ghost"}
+                variant={active ? 'default' : 'ghost'}
                 className={`w-full justify-start relative ${
                   isOpen ? 'px-3' : 'px-2'
                 } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -193,15 +223,13 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
                 <Icon className={`h-5 w-5 ${isOpen ? 'mr-3' : ''}`} />
                 {isOpen && (
                   <>
-                    <span className="truncate">{item.name}</span>
+                    <span className='truncate'>{item.name}</span>
                     {item.badge && (
-                      <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
+                      <span className='ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center'>
                         {item.badge}
                       </span>
                     )}
-                    {disabled && (
-                      <Shield className="ml-auto h-4 w-4 text-yellow-500" />
-                    )}
+                    {disabled && <Shield className='ml-auto h-4 w-4 text-yellow-500' />}
                   </>
                 )}
               </Button>
@@ -211,23 +239,25 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
 
         {/* Bottom Section */}
         {isOpen && (
-          <div className="absolute bottom-4 left-4 right-4 space-y-2">
+          <div className='absolute bottom-4 left-4 right-4 space-y-2'>
             <Button
-              variant="ghost"
-              className="w-full justify-start"
+              variant='ghost'
+              className='w-full justify-start'
               onClick={() => router.push('/help')}
             >
-              <HelpCircle className="h-5 w-5 mr-3" />
+              <HelpCircle className='h-5 w-5 mr-3' />
               Help & Support
             </Button>
-            
+
             {/* User Status */}
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  user.isVerified ? 'bg-green-500' : 'bg-yellow-500'
-                }`} />
-                <span className="text-xs text-gray-600 capitalize">
+            <div className='p-3 bg-gray-50 rounded-lg'>
+              <div className='flex items-center space-x-2'>
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    user.isVerified ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}
+                />
+                <span className='text-xs text-gray-600 capitalize'>
                   {user.role} {user.isVerified ? '(Verified)' : '(Pending)'}
                 </span>
               </div>
@@ -237,60 +267,64 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
       </div>
 
       {/* Mobile Sidebar */}
-      <div className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-transform duration-300 z-50 w-64 lg:hidden ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        
+      <div
+        className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-white border-r border-gray-200 transition-transform duration-300 z-50 w-64 lg:hidden ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
         {/* Navigation */}
-        <nav className="p-4 space-y-2">
-          {navItems.map((item) => {
+        <nav className='p-4 space-y-2'>
+          {navItems.map(item => {
             const Icon = item.icon;
             const active = isActive(item.href);
-            const disabled = item.requiresVerification && !user.isVerified;
-            
+            const disabled =
+              item.requiresVerification &&
+              user.role === 'provider' &&
+              user.verificationStatus !== 'approved';
+
             return (
               <Button
                 key={item.name}
-                variant={active ? "default" : "ghost"}
+                variant={active ? 'default' : 'ghost'}
                 className={`w-full justify-start relative ${
                   disabled ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
                 onClick={() => handleNavClick(item.href, item.requiresVerification)}
                 disabled={disabled}
               >
-                <Icon className="h-5 w-5 mr-3" />
-                <span className="truncate">{item.name}</span>
+                <Icon className='h-5 w-5 mr-3' />
+                <span className='truncate'>{item.name}</span>
                 {item.badge && (
-                  <span className="ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center">
+                  <span className='ml-auto bg-red-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] h-5 flex items-center justify-center'>
                     {item.badge}
                   </span>
                 )}
-                {disabled && (
-                  <Shield className="ml-auto h-4 w-4 text-yellow-500" />
-                )}
+                {disabled && <Shield className='ml-auto h-4 w-4 text-yellow-500' />}
               </Button>
             );
           })}
         </nav>
 
         {/* Bottom Section */}
-        <div className="absolute bottom-4 left-4 right-4 space-y-2">
+        <div className='absolute bottom-4 left-4 right-4 space-y-2'>
           <Button
-            variant="ghost"
-            className="w-full justify-start"
+            variant='ghost'
+            className='w-full justify-start'
             onClick={() => router.push('/help')}
           >
-            <HelpCircle className="h-5 w-5 mr-3" />
+            <HelpCircle className='h-5 w-5 mr-3' />
             Help & Support
           </Button>
-          
+
           {/* User Status */}
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center space-x-2">
-              <div className={`w-2 h-2 rounded-full ${
-                user.isVerified ? 'bg-green-500' : 'bg-yellow-500'
-              }`} />
-              <span className="text-xs text-gray-600 capitalize">
+          <div className='p-3 bg-gray-50 rounded-lg'>
+            <div className='flex items-center space-x-2'>
+              <div
+                className={`w-2 h-2 rounded-full ${
+                  user.isVerified ? 'bg-green-500' : 'bg-yellow-500'
+                }`}
+              />
+              <span className='text-xs text-gray-600 capitalize'>
                 {user.role} {user.isVerified ? '(Verified)' : '(Pending)'}
               </span>
             </div>

@@ -15,10 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     await connectDB();
@@ -35,18 +32,18 @@ export async function GET(request: NextRequest) {
     if (seekers.length === 0 || providers.length === 0) {
       return NextResponse.json({
         success: true,
-        data: []
+        data: [],
       });
     }
 
     // Generate mock bookings data (in production, this would come from a Bookings collection)
     const locations = [
       'Bandra West, Mumbai',
-      'Andheri East, Mumbai', 
+      'Andheri East, Mumbai',
       'Powai, Mumbai',
       'Thane West, Mumbai',
       'Worli, Mumbai',
-      'Malad West, Mumbai'
+      'Malad West, Mumbai',
     ];
 
     const titles = [
@@ -55,7 +52,7 @@ export async function GET(request: NextRequest) {
       'Luxury Studio Apartment',
       'Budget Friendly Room',
       'Spacious Private Room',
-      'Furnished Shared Accommodation'
+      'Furnished Shared Accommodation',
     ];
 
     const statuses = ['pending', 'approved', 'rejected', 'cancelled', 'completed'];
@@ -74,14 +71,20 @@ export async function GET(request: NextRequest) {
       if (isHistorical) {
         // Historical booking (completed)
         checkInDate = new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000); // Last 90 days
-        checkOutDate = new Date(checkInDate.getTime() + (Math.random() * 20 + 5) * 24 * 60 * 60 * 1000); // 5-25 days stay
+        checkOutDate = new Date(
+          checkInDate.getTime() + (Math.random() * 20 + 5) * 24 * 60 * 60 * 1000
+        ); // 5-25 days stay
       } else {
         // Future booking
         checkInDate = new Date(Date.now() + Math.random() * 60 * 24 * 60 * 60 * 1000); // Next 60 days
-        checkOutDate = new Date(checkInDate.getTime() + (Math.random() * 25 + 7) * 24 * 60 * 60 * 1000); // 7-32 days stay
+        checkOutDate = new Date(
+          checkInDate.getTime() + (Math.random() * 25 + 7) * 24 * 60 * 60 * 1000
+        ); // 7-32 days stay
       }
 
-      const duration = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+      const duration = Math.ceil(
+        (checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
       const dailyRate = Math.floor(Math.random() * 8000) + 6000; // 6000-14000 per day (realistic Mumbai rates)
       const totalAmount = dailyRate * duration;
 
@@ -106,19 +109,19 @@ export async function GET(request: NextRequest) {
           _id: seeker._id,
           name: seeker.name,
           email: seeker.email,
-          phone: seeker.phone
+          phone: seeker.phone,
         },
         provider: {
           _id: provider._id,
           name: provider.name,
           email: provider.email,
-          phone: provider.phone || `+91 ${Math.floor(Math.random() * 9000000000) + 1000000000}`
+          phone: provider.phone || `+91 ${Math.floor(Math.random() * 9000000000) + 1000000000}`,
         },
         listing: {
           _id: `listing-${Math.floor(Math.random() * 20) + 1}`,
           title: titles[Math.floor(Math.random() * titles.length)],
           location: locations[Math.floor(Math.random() * locations.length)],
-          price: dailyRate
+          price: dailyRate,
         },
         status: bookingStatus,
         checkIn: checkInDate.toISOString(),
@@ -126,9 +129,11 @@ export async function GET(request: NextRequest) {
         duration: duration,
         totalAmount: totalAmount,
         paymentStatus: paymentStat,
-        createdAt: new Date(checkInDate.getTime() - Math.random() * 14 * 24 * 60 * 60 * 1000).toISOString(), // Booked 0-14 days before check-in
+        createdAt: new Date(
+          checkInDate.getTime() - Math.random() * 14 * 24 * 60 * 60 * 1000
+        ).toISOString(), // Booked 0-14 days before check-in
         updatedAt: new Date(Date.now() - Math.random() * 3 * 24 * 60 * 60 * 1000).toISOString(), // Updated in last 3 days
-        notes: Math.random() > 0.7 ? 'Special requirements discussed with provider' : undefined
+        notes: Math.random() > 0.7 ? 'Special requirements discussed with provider' : undefined,
       };
     });
 
@@ -140,32 +145,33 @@ export async function GET(request: NextRequest) {
     }
 
     if (paymentStatus !== 'all') {
-      filteredBookings = filteredBookings.filter(booking => booking.paymentStatus === paymentStatus);
+      filteredBookings = filteredBookings.filter(
+        booking => booking.paymentStatus === paymentStatus
+      );
     }
 
     if (search) {
       const searchLower = search.toLowerCase();
-      filteredBookings = filteredBookings.filter(booking =>
-        booking.seeker.name.toLowerCase().includes(searchLower) ||
-        booking.provider.name.toLowerCase().includes(searchLower) ||
-        booking.listing.title.toLowerCase().includes(searchLower) ||
-        booking.listing.location.toLowerCase().includes(searchLower)
+      filteredBookings = filteredBookings.filter(
+        booking =>
+          booking.seeker.name.toLowerCase().includes(searchLower) ||
+          booking.provider.name.toLowerCase().includes(searchLower) ||
+          booking.listing.title.toLowerCase().includes(searchLower) ||
+          booking.listing.location.toLowerCase().includes(searchLower)
       );
     }
 
     // Sort by creation date (newest first)
-    filteredBookings.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    filteredBookings.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     return NextResponse.json({
       success: true,
-      data: filteredBookings
+      data: filteredBookings,
     });
-
   } catch (error) {
     console.error('Get bookings error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to get bookings' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to get bookings' }, { status: 500 });
   }
 }

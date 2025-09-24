@@ -59,9 +59,8 @@ export default function BookingsPage() {
 
   const fetchBookings = async () => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch('/api/seeker/bookings', {
-        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -77,10 +76,9 @@ export default function BookingsPage() {
 
   const cancelBooking = async (bookingId: string) => {
     try {
-      const token = localStorage.getItem('token');
       const response = await fetch(`/api/seeker/bookings/${bookingId}/cancel`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -91,21 +89,21 @@ export default function BookingsPage() {
     }
   };
 
-  const filteredBookings = bookings.filter(booking => 
-    filter === 'all' || booking.status === filter
+  const filteredBookings = bookings.filter(
+    booking => filter === 'all' || booking.status === filter
   );
 
   if (loading) {
     return (
-      <DashboardLayout title="My Bookings">
-        <div className="p-6 space-y-6">
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
+      <DashboardLayout title='My Bookings'>
+        <div className='p-6 space-y-6'>
+          <div className='space-y-4'>
+            {[1, 2, 3].map(i => (
+              <Card key={i} className='animate-pulse'>
+                <CardContent className='p-6'>
+                  <div className='h-6 bg-gray-200 rounded mb-4'></div>
+                  <div className='h-4 bg-gray-200 rounded mb-2'></div>
+                  <div className='h-4 bg-gray-200 rounded'></div>
                 </CardContent>
               </Card>
             ))}
@@ -116,21 +114,21 @@ export default function BookingsPage() {
   }
 
   return (
-    <DashboardLayout title="My Bookings">
-      <div className="p-6 space-y-6">
+    <DashboardLayout title='My Bookings'>
+      <div className='p-6 space-y-6'>
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className='flex justify-between items-center'>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
-            <p className="text-gray-600">
+            <h1 className='text-2xl font-bold text-gray-900'>My Bookings</h1>
+            <p className='text-gray-600'>
               {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
-          {['all', 'pending', 'approved', 'completed', 'cancelled'].map((status) => (
+        <div className='flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit'>
+          {['all', 'pending', 'approved', 'completed', 'cancelled'].map(status => (
             <button
               key={status}
               onClick={() => setFilter(status)}
@@ -147,105 +145,105 @@ export default function BookingsPage() {
 
         {/* Bookings List */}
         {filteredBookings.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className='text-center py-12'>
             <CardContent>
-              <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <Calendar className='h-16 w-16 text-gray-300 mx-auto mb-4' />
+              <h3 className='text-lg font-semibold text-gray-900 mb-2'>
                 {filter === 'all' ? 'No bookings yet' : `No ${filter} bookings`}
               </h3>
-              <p className="text-gray-600 mb-4">
-                {filter === 'all' 
+              <p className='text-gray-600 mb-4'>
+                {filter === 'all'
                   ? 'Start exploring and book your perfect space.'
-                  : `You don't have any ${filter} bookings at the moment.`
-                }
+                  : `You don't have any ${filter} bookings at the moment.`}
               </p>
               {filter === 'all' && (
-                <Button onClick={() => window.location.href = '/search'}>
-                  Browse Listings
-                </Button>
+                <Button onClick={() => (window.location.href = '/search')}>Browse Listings</Button>
               )}
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {filteredBookings.map((booking) => (
-              <Card key={booking.id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className='space-y-4'>
+            {filteredBookings.map(booking => (
+              <Card key={booking.id} className='overflow-hidden'>
+                <CardContent className='p-6'>
+                  <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
                     {/* Listing Info */}
-                    <div className="flex gap-4">
+                    <div className='flex gap-4'>
                       <img
                         src={booking.listing.images[0] || '/images/placeholder-room.jpg'}
                         alt={booking.listing.title}
-                        className="w-20 h-20 rounded-lg object-cover"
+                        className='w-20 h-20 rounded-lg object-cover'
                       />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">
+                      <div className='flex-1'>
+                        <h3 className='font-semibold text-gray-900 mb-1'>
                           {booking.listing.title}
                         </h3>
-                        <div className="flex items-center text-gray-600 mb-2">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          <span className="text-sm">{booking.listing.location}</span>
+                        <div className='flex items-center text-gray-600 mb-2'>
+                          <MapPin className='h-4 w-4 mr-1' />
+                          <span className='text-sm'>{booking.listing.location}</span>
                         </div>
-                        <div className="flex items-center text-gray-600">
-                          <User className="h-4 w-4 mr-1" />
-                          <span className="text-sm">Provider: {booking.provider.name}</span>
+                        <div className='flex items-center text-gray-600'>
+                          <User className='h-4 w-4 mr-1' />
+                          <span className='text-sm'>Provider: {booking.provider.name}</span>
                         </div>
                       </div>
                     </div>
 
                     {/* Booking Details */}
-                    <div className="flex flex-col lg:items-end gap-2">
-                      <div className="flex gap-2">
+                    <div className='flex flex-col lg:items-end gap-2'>
+                      <div className='flex gap-2'>
                         <Badge className={statusColors[booking.status]}>
                           {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                         </Badge>
                         <Badge className={paymentStatusColors[booking.paymentStatus]}>
-                          {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                          {booking.paymentStatus.charAt(0).toUpperCase() +
+                            booking.paymentStatus.slice(1)}
                         </Badge>
                       </div>
-                      
-                      <div className="flex items-center text-gray-600 text-sm">
-                        <Calendar className="h-4 w-4 mr-1" />
+
+                      <div className='flex items-center text-gray-600 text-sm'>
+                        <Calendar className='h-4 w-4 mr-1' />
                         <span>Move-in: {new Date(booking.moveInDate).toLocaleDateString()}</span>
                       </div>
-                      
-                      <div className="flex items-center text-gray-600 text-sm">
-                        <Clock className="h-4 w-4 mr-1" />
+
+                      <div className='flex items-center text-gray-600 text-sm'>
+                        <Clock className='h-4 w-4 mr-1' />
                         <span>Duration: {booking.duration} months</span>
                       </div>
-                      
-                      <div className="flex items-center text-gray-900 font-semibold">
-                        <CreditCard className="h-4 w-4 mr-1" />
+
+                      <div className='flex items-center text-gray-900 font-semibold'>
+                        <CreditCard className='h-4 w-4 mr-1' />
                         <span>₹{booking.totalAmount.toLocaleString()}</span>
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex flex-col gap-2 lg:min-w-[120px]">
+                    <div className='flex flex-col gap-2 lg:min-w-[120px]'>
                       <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.location.href = `/messages?provider=${booking.provider.id}`}
+                        size='sm'
+                        variant='outline'
+                        onClick={() =>
+                          (window.location.href = `/messages?provider=${booking.provider.id}`)
+                        }
                       >
-                        <MessageCircle className="h-4 w-4 mr-1" />
+                        <MessageCircle className='h-4 w-4 mr-1' />
                         Message
                       </Button>
-                      
+
                       {booking.status === 'pending' && (
                         <Button
-                          size="sm"
-                          variant="destructive"
+                          size='sm'
+                          variant='destructive'
                           onClick={() => cancelBooking(booking.id)}
                         >
                           Cancel
                         </Button>
                       )}
-                      
+
                       <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => window.location.href = `/bookings/${booking.id}`}
+                        size='sm'
+                        variant='ghost'
+                        onClick={() => (window.location.href = `/bookings/${booking.id}`)}
                       >
                         View Details
                       </Button>
@@ -253,8 +251,8 @@ export default function BookingsPage() {
                   </div>
 
                   {/* Request Date */}
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-600">
+                  <div className='mt-4 pt-4 border-t border-gray-100'>
+                    <p className='text-sm text-gray-600'>
                       Requested on {new Date(booking.requestDate).toLocaleDateString()}
                     </p>
                   </div>

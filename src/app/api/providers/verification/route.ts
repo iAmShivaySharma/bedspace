@@ -27,10 +27,7 @@ export async function GET(request: NextRequest) {
     const provider = await Provider.findById(user._id);
 
     if (!provider) {
-      return NextResponse.json(
-        { success: false, error: 'Provider not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Provider not found' }, { status: 404 });
     }
 
     return NextResponse.json(
@@ -48,7 +45,6 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error('Get verification status error:', error);
     return NextResponse.json(
@@ -78,7 +74,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
     // Validate input
     const validationResult = providerVerificationSchema.safeParse(body);
     if (!validationResult.success) {
@@ -98,10 +94,7 @@ export async function PUT(request: NextRequest) {
     const provider = await Provider.findById(user._id);
 
     if (!provider) {
-      return NextResponse.json(
-        { success: false, error: 'Provider not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Provider not found' }, { status: 404 });
     }
 
     // Update provider information
@@ -124,7 +117,6 @@ export async function PUT(request: NextRequest) {
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error('Update provider verification error:', error);
     return NextResponse.json(

@@ -1,3 +1,4 @@
+// Server-side upload utilities (Node.js only)
 import { minioClient, BUCKET_NAME } from '@/lib/minio';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
@@ -28,10 +29,7 @@ const DEFAULT_OPTIONS: UploadOptions = {
   maxSize: 5 * 1024 * 1024, // 5MB
 };
 
-export async function uploadFile(
-  file: File,
-  options: UploadOptions = {}
-): Promise<UploadResult> {
+export async function uploadFile(file: File, options: UploadOptions = {}): Promise<UploadResult> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
 
   // Validate file type
@@ -127,7 +125,11 @@ export async function deleteFile(fileName: string, folder?: string): Promise<boo
   }
 }
 
-export async function getFileUrl(fileName: string, folder?: string, expirySeconds: number = 24 * 60 * 60): Promise<string> {
+export async function getFileUrl(
+  fileName: string,
+  folder?: string,
+  expirySeconds: number = 24 * 60 * 60
+): Promise<string> {
   try {
     const filePath = folder ? `${folder}/${fileName}` : fileName;
     return await minioClient.presignedGetObject(BUCKET_NAME, filePath, expirySeconds);
@@ -135,30 +137,4 @@ export async function getFileUrl(fileName: string, folder?: string, expirySecond
     console.error('Error getting file URL from MinIO:', error);
     throw new Error('Failed to get file URL');
   }
-}
-
-export function validateFileType(file: File, allowedTypes: string[]): boolean {
-  return allowedTypes.includes(file.type);
-}
-
-export function validateFileSize(file: File, maxSize: number): boolean {
-  return file.size <= maxSize;
-}
-
-export function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 Bytes';
-  
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-export function getFileIcon(mimeType: string): string {
-  if (mimeType.startsWith('image/')) return '🖼️';
-  if (mimeType === 'application/pdf') return '📄';
-  if (mimeType.startsWith('video/')) return '🎥';
-  if (mimeType.startsWith('audio/')) return '🎵';
-  return '📁';
 }

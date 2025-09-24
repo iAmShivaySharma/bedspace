@@ -3,15 +3,18 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: '.env.local' });
 
 // User schema (simplified for seeding)
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  name: { type: String, required: true },
-  role: { type: String, required: true },
-  isVerified: { type: Boolean, default: false },
-  isEmailVerified: { type: Boolean, default: false },
-  isPhoneVerified: { type: Boolean, default: false },
-}, { timestamps: true });
+const userSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    name: { type: String, required: true },
+    role: { type: String, required: true },
+    isVerified: { type: Boolean, default: false },
+    isEmailVerified: { type: Boolean, default: false },
+    isPhoneVerified: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
 
 const User = mongoose.model('User', userSchema);
 
@@ -21,7 +24,7 @@ async function seedAdmin() {
     await mongoose.connect(process.env.MONGODB_URI, {
       dbName: process.env.MONGODB_DB,
     });
-    
+
     console.log('Connected to MongoDB');
 
     // Check if admin already exists
@@ -49,7 +52,6 @@ async function seedAdmin() {
     console.log('Admin user created successfully!');
     console.log('Email: admin@bedspace.com');
     console.log('Password: admin123');
-
   } catch (error) {
     console.error('Error seeding admin:', error);
   } finally {

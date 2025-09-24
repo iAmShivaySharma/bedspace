@@ -33,21 +33,16 @@ const level = () => {
 const format = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss:ms' }),
   winston.format.colorize({ all: true }),
-  winston.format.printf(
-    (info) => `${info.timestamp} ${info.level}: ${info.message}`,
-  ),
+  winston.format.printf(info => `${info.timestamp} ${info.level}: ${info.message}`)
 );
 
 // Define transports
 const transports = [
   // Console transport
   new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
+    format: winston.format.combine(winston.format.colorize(), winston.format.simple()),
   }),
-  
+
   // Error log file
   new DailyRotateFile({
     filename: 'logs/error-%DATE%.log',
@@ -57,12 +52,9 @@ const transports = [
     json: true,
     maxSize: '20m',
     maxFiles: '14d',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
+    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   }),
-  
+
   // Combined log file
   new DailyRotateFile({
     filename: 'logs/combined-%DATE%.log',
@@ -71,12 +63,9 @@ const transports = [
     json: true,
     maxSize: '20m',
     maxFiles: '14d',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
+    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   }),
-  
+
   // HTTP requests log
   new DailyRotateFile({
     filename: 'logs/http-%DATE%.log',
@@ -85,10 +74,7 @@ const transports = [
     json: true,
     maxSize: '20m',
     maxFiles: '7d',
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.json()
-    )
+    format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
   }),
 ];
 
@@ -136,12 +122,18 @@ export const logActivity = (userId: string, action: string, details?: any) => {
     action,
     details,
     timestamp: new Date().toISOString(),
-    type: 'activity'
+    type: 'activity',
   });
 };
 
 // API request logging
-export const logApiRequest = (method: string, url: string, userId?: string, statusCode?: number, duration?: number) => {
+export const logApiRequest = (
+  method: string,
+  url: string,
+  userId?: string,
+  statusCode?: number,
+  duration?: number
+) => {
   logger.http('API Request', {
     method,
     url,
@@ -149,12 +141,18 @@ export const logApiRequest = (method: string, url: string, userId?: string, stat
     statusCode,
     duration,
     timestamp: new Date().toISOString(),
-    type: 'api_request'
+    type: 'api_request',
   });
 };
 
 // Database operation logging
-export const logDbOperation = (operation: string, collection: string, userId?: string, success: boolean = true, error?: any) => {
+export const logDbOperation = (
+  operation: string,
+  collection: string,
+  userId?: string,
+  success: boolean = true,
+  error?: any
+) => {
   const level = success ? 'info' : 'error';
   logger.log(level, 'Database Operation', {
     operation,
@@ -163,7 +161,7 @@ export const logDbOperation = (operation: string, collection: string, userId?: s
     success,
     error: error?.message || error,
     timestamp: new Date().toISOString(),
-    type: 'db_operation'
+    type: 'db_operation',
   });
 };
 

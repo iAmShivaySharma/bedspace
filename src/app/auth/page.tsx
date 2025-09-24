@@ -26,14 +26,14 @@ export default function AuthPage() {
   const handleLoginSuccess = (data: any) => {
     setMessage('Login successful! Redirecting...');
     setError('');
-    
+
     // Redirect based on user role and verification status
     setTimeout(() => {
       if (data.user.role === 'admin') {
         router.push('/admin');
       } else if (data.user.role === 'provider') {
         if (data.user.verificationStatus === 'approved') {
-          router.push('/provider/dashboard');
+          router.push('/dashboard');
         } else {
           router.push('/provider/verification');
         }
@@ -46,7 +46,7 @@ export default function AuthPage() {
   const handleOTPSuccess = (data: any) => {
     setMessage('Email verified successfully! Redirecting...');
     setError('');
-    
+
     // Redirect based on user role
     setTimeout(() => {
       if (data.user.role === 'provider') {
@@ -68,23 +68,23 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4'>
+      <div className='w-full max-w-md'>
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">BedSpace</h1>
-          <p className="text-gray-600">Your trusted bed space platform</p>
+        <div className='text-center mb-8'>
+          <h1 className='text-3xl font-bold text-gray-900 mb-2'>BedSpace</h1>
+          <p className='text-gray-600'>Your trusted bed space platform</p>
         </div>
 
         {/* Messages */}
         {message && (
-          <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-md">
+          <div className='mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-md'>
             {message}
           </div>
         )}
-        
+
         {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          <div className='mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md'>
             {error}
           </div>
         )}
@@ -93,13 +93,13 @@ export default function AuthPage() {
         {currentStep === 'login' && (
           <>
             <LoginForm onSuccess={handleLoginSuccess} onError={handleError} />
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
+            <div className='mt-4 text-center'>
+              <p className='text-sm text-gray-600'>
+                Don&apos;t have an account?{' '}
                 <Button
-                  variant="link"
+                  variant='link'
                   onClick={() => setCurrentStep('register')}
-                  className="p-0 h-auto text-blue-600 hover:text-blue-800"
+                  className='p-0 h-auto text-blue-600 hover:text-blue-800'
                 >
                   Sign up
                 </Button>
@@ -111,13 +111,13 @@ export default function AuthPage() {
         {currentStep === 'register' && (
           <>
             <RegisterForm onSuccess={handleRegisterSuccess} onError={handleError} />
-            <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
+            <div className='mt-4 text-center'>
+              <p className='text-sm text-gray-600'>
                 Already have an account?{' '}
                 <Button
-                  variant="link"
+                  variant='link'
                   onClick={() => setCurrentStep('login')}
-                  className="p-0 h-auto text-blue-600 hover:text-blue-800"
+                  className='p-0 h-auto text-blue-600 hover:text-blue-800'
                 >
                   Sign in
                 </Button>
@@ -134,11 +134,11 @@ export default function AuthPage() {
               onError={handleError}
               onResendOTP={handleResendOTP}
             />
-            <div className="mt-4 text-center">
+            <div className='mt-4 text-center'>
               <Button
-                variant="link"
+                variant='link'
                 onClick={() => setCurrentStep('register')}
-                className="text-sm text-gray-600 hover:text-gray-800"
+                className='text-sm text-gray-600 hover:text-gray-800'
               >
                 ← Back to registration
               </Button>
@@ -147,7 +147,7 @@ export default function AuthPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-8 text-center text-xs text-gray-500">
+        <div className='mt-8 text-center text-xs text-gray-500'>
           <p>© 2024 BedSpace. All rights reserved.</p>
         </div>
       </div>

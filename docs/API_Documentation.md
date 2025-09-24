@@ -505,6 +505,213 @@ Get seeker's booking history.
 
 ---
 
+### Provider Verification Endpoints
+
+All provider verification endpoints require `role: "provider"` and valid authentication.
+
+#### GET /api/providers/verification
+
+Get provider verification status and documents.
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "verificationStatus": "pending",
+    "verificationDocuments": [
+      {
+        "type": "id_card",
+        "fileName": "aadhar_card.jpg",
+        "fileUrl": "https://storage.bedspace.com/documents/aadhar_card.jpg",
+        "status": "approved",
+        "uploadedAt": "2024-01-15T10:30:00Z"
+      }
+    ],
+    "businessName": "My Property Business",
+    "businessAddress": "123 Street, Mumbai",
+    "businessPhone": "+91 9876543210",
+    "rejectionReason": null
+  }
+}
+```
+
+#### PUT /api/providers/verification
+
+Update provider business information.
+
+**Headers:**
+
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**Request Body:**
+
+```json
+{
+  "businessName": "Updated Business Name",
+  "businessAddress": "Updated Address",
+  "businessPhone": "+91 9876543210"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Business information updated successfully"
+}
+```
+
+#### POST /api/providers/verification-documents
+
+Upload verification document.
+
+**Headers:**
+
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**Request Body:**
+
+```json
+{
+  "type": "id_card",
+  "url": "https://storage.bedspace.com/documents/document.jpg"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Document uploaded successfully",
+  "data": {
+    "document": {
+      "type": "id_card",
+      "fileName": "document.jpg",
+      "fileUrl": "https://storage.bedspace.com/documents/document.jpg",
+      "status": "pending",
+      "uploadedAt": "2024-01-15T10:30:00Z"
+    },
+    "verificationStatus": "pending"
+  }
+}
+```
+
+#### GET /api/providers/listings
+
+Get provider's listings (requires verification).
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "listing_id",
+      "title": "Modern Private Room",
+      "description": "Comfortable room with all amenities",
+      "price": 15000,
+      "location": "Bandra West, Mumbai",
+      "status": "active",
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 5,
+    "pages": 1
+  }
+}
+```
+
+#### POST /api/providers/listings
+
+Create new listing (requires verification).
+
+**Headers:**
+
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**Request Body:**
+
+```json
+{
+  "title": "Modern Private Room",
+  "description": "Comfortable room with all amenities",
+  "price": 15000,
+  "location": "Bandra West, Mumbai",
+  "amenities": ["wifi", "ac", "kitchen"],
+  "images": ["image1.jpg", "image2.jpg"],
+  "availability": {
+    "availableFrom": "2024-02-01",
+    "minimumStay": 30
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Listing created successfully",
+  "data": {
+    "_id": "listing_id",
+    "title": "Modern Private Room",
+    "status": "pending"
+  }
+}
+```
+
+### File Upload Endpoints
+
+#### POST /api/upload/presigned-url
+
+Get presigned URL for direct file upload to storage.
+
+**Headers:**
+
+- `Authorization: Bearer <token>`
+- `Content-Type: application/json`
+
+**Request Body:**
+
+```json
+{
+  "fileName": "document.jpg",
+  "fileType": "image/jpeg",
+  "folder": "documents"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "presignedUrl": "https://storage.bedspace.com/...",
+    "objectName": "documents/user_123/unique_file.jpg",
+    "publicUrl": "https://storage.bedspace.com/bedspace-uploads/documents/user_123/unique_file.jpg",
+    "fileName": "unique_file.jpg"
+  }
+}
+```
+
+---
+
 ### Search & Location Endpoints
 
 #### GET /api/search
