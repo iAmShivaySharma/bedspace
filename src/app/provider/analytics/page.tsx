@@ -43,7 +43,7 @@ export default function ProviderAnalyticsPage() {
     limit: 5,
   });
 
-  const user = userResponse?.data as Provider;
+  const user = userResponse?.data?.user as Provider | undefined;
   const stats: ProviderStats = statsResponse?.data || {
     totalListings: 0,
     activeListings: 0,

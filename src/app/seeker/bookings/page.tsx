@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,7 +66,7 @@ export default function BookingsPage() {
   });
   const [cancelBookingRequest] = useCancelBookingRequestMutation();
 
-  const bookings: unknown = bookingsResponse?.data || [];
+  const bookings: any = bookingsResponse?.data || [];
 
   const cancelBooking = async (bookingId: string) => {
     try {
@@ -79,7 +79,7 @@ export default function BookingsPage() {
   };
 
   const filteredBookings = bookings.filter(
-    booking => filter === 'all' || booking.status === filter
+    (booking: { status: string }) => filter === 'all' || booking.status === filter
   );
 
   if (isLoading) {
@@ -136,108 +136,236 @@ export default function BookingsPage() {
           </Card>
         ) : (
           <div className='space-y-4'>
-            {filteredBookings.map(booking => (
-              <Card key={booking.id} className='overflow-hidden'>
-                <CardContent className='p-6'>
-                  <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
-                    {/* Listing Info */}
-                    <div className='flex gap-4'>
-                      <img
-                        src={booking.listing.images[0] || '/images/placeholder-room.jpg'}
-                        alt={booking.listing.title}
-                        className='w-20 h-20 rounded-lg object-cover'
-                      />
-                      <div className='flex-1'>
-                        <h3 className='font-semibold text-gray-900 mb-1'>
-                          {booking.listing.title}
-                        </h3>
-                        <div className='flex items-center text-gray-600 mb-2'>
-                          <MapPin className='h-4 w-4 mr-1' />
-                          <span className='text-sm'>{booking.listing.location}</span>
-                        </div>
-                        <div className='flex items-center text-gray-600'>
-                          <User className='h-4 w-4 mr-1' />
-                          <span className='text-sm'>Provider: {booking.provider.name}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Booking Details */}
-                    <div className='flex flex-col lg:items-end gap-2'>
-                      <div className='flex gap-2'>
-                        <Badge className={statusColors[booking.status]}>
-                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                        </Badge>
-                        <Badge
-                          className={
-                            paymentStatusColors[
-                              booking.paymentStatus as keyof typeof paymentStatusColors
-                            ] || 'bg-gray-100 text-gray-800'
-                          }
-                        >
-                          {booking.paymentStatus.charAt(0).toUpperCase() +
-                            booking.paymentStatus.slice(1)}
-                        </Badge>
-                      </div>
-
-                      <div className='flex items-center text-gray-600 text-sm'>
-                        <Calendar className='h-4 w-4 mr-1' />
-                        <span>Move-in: {new Date(booking.moveInDate).toLocaleDateString()}</span>
-                      </div>
-
-                      <div className='flex items-center text-gray-600 text-sm'>
-                        <Clock className='h-4 w-4 mr-1' />
-                        <span>Duration: {booking.duration} months</span>
-                      </div>
-
-                      <div className='flex items-center text-gray-900 font-semibold'>
-                        <CreditCard className='h-4 w-4 mr-1' />
-                        <span>₹{booking.totalAmount.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className='flex flex-col gap-2 lg:min-w-[120px]'>
-                      <Button
-                        size='sm'
-                        variant='outline'
-                        onClick={() =>
-                          (window.location.href = `/messages?provider=${booking.provider.id}`)
-                        }
+            {filteredBookings.map(
+              (booking: {
+                id: Key | null | undefined;
+                listing: {
+                  images: any[];
+                  title:
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | ReactElement<unknown, string | JSXElementConstructor<any>>
+                    | Iterable<ReactNode>
+                    | Promise<
+                        | string
+                        | number
+                        | bigint
+                        | boolean
+                        | ReactPortal
+                        | ReactElement<unknown, string | JSXElementConstructor<any>>
+                        | Iterable<ReactNode>
+                        | null
+                        | undefined
                       >
-                        <MessageCircle className='h-4 w-4 mr-1' />
-                        Message
-                      </Button>
+                    | null
+                    | undefined;
+                  location:
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | ReactElement<unknown, string | JSXElementConstructor<any>>
+                    | Iterable<ReactNode>
+                    | ReactPortal
+                    | Promise<
+                        | string
+                        | number
+                        | bigint
+                        | boolean
+                        | ReactPortal
+                        | ReactElement<unknown, string | JSXElementConstructor<any>>
+                        | Iterable<ReactNode>
+                        | null
+                        | undefined
+                      >
+                    | null
+                    | undefined;
+                };
+                provider: {
+                  name:
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | ReactElement<unknown, string | JSXElementConstructor<any>>
+                    | Iterable<ReactNode>
+                    | ReactPortal
+                    | Promise<
+                        | string
+                        | number
+                        | bigint
+                        | boolean
+                        | ReactPortal
+                        | ReactElement<unknown, string | JSXElementConstructor<any>>
+                        | Iterable<ReactNode>
+                        | null
+                        | undefined
+                      >
+                    | null
+                    | undefined;
+                  id: any;
+                };
+                status: string;
+                paymentStatus: string;
+                moveInDate: string | number | Date;
+                duration:
+                  | string
+                  | number
+                  | bigint
+                  | boolean
+                  | ReactElement<unknown, string | JSXElementConstructor<any>>
+                  | Iterable<ReactNode>
+                  | ReactPortal
+                  | Promise<
+                      | string
+                      | number
+                      | bigint
+                      | boolean
+                      | ReactPortal
+                      | ReactElement<unknown, string | JSXElementConstructor<any>>
+                      | Iterable<ReactNode>
+                      | null
+                      | undefined
+                    >
+                  | null
+                  | undefined;
+                totalAmount: {
+                  toLocaleString: () =>
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | ReactElement<unknown, string | JSXElementConstructor<any>>
+                    | Iterable<ReactNode>
+                    | ReactPortal
+                    | Promise<
+                        | string
+                        | number
+                        | bigint
+                        | boolean
+                        | ReactPortal
+                        | ReactElement<unknown, string | JSXElementConstructor<any>>
+                        | Iterable<ReactNode>
+                        | null
+                        | undefined
+                      >
+                    | null
+                    | undefined;
+                };
+                requestDate: string | number | Date;
+              }) => (
+                <Card key={booking.id} className='overflow-hidden'>
+                  <CardContent className='p-6'>
+                    <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
+                      {/* Listing Info */}
+                      <div className='flex gap-4'>
+                        <img
+                          src={booking.listing.images[0] || '/images/placeholder-room.jpg'}
+                          alt={
+                            typeof booking.listing.title === 'string'
+                              ? booking.listing.title
+                              : String(booking.listing.title ?? 'Room Image')
+                          }
+                          className='w-20 h-20 rounded-lg object-cover'
+                        />
+                        <div className='flex-1'>
+                          <h3 className='font-semibold text-gray-900 mb-1'>
+                            {booking.listing.title}
+                          </h3>
+                          <div className='flex items-center text-gray-600 mb-2'>
+                            <MapPin className='h-4 w-4 mr-1' />
+                            <span className='text-sm'>{booking.listing.location}</span>
+                          </div>
+                          <div className='flex items-center text-gray-600'>
+                            <User className='h-4 w-4 mr-1' />
+                            <span className='text-sm'>Provider: {booking.provider.name}</span>
+                          </div>
+                        </div>
+                      </div>
 
-                      {booking.status === 'pending' && (
+                      {/* Booking Details */}
+                      <div className='flex flex-col lg:items-end gap-2'>
+                        <div className='flex gap-2'>
+                          <Badge
+                            className={statusColors[booking.status as keyof typeof statusColors]}
+                          >
+                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                          </Badge>
+                          <Badge
+                            className={
+                              paymentStatusColors[
+                                booking.paymentStatus as keyof typeof paymentStatusColors
+                              ] || 'bg-gray-100 text-gray-800'
+                            }
+                          >
+                            {booking.paymentStatus.charAt(0).toUpperCase() +
+                              booking.paymentStatus.slice(1)}
+                          </Badge>
+                        </div>
+
+                        <div className='flex items-center text-gray-600 text-sm'>
+                          <Calendar className='h-4 w-4 mr-1' />
+                          <span>Move-in: {new Date(booking.moveInDate).toLocaleDateString()}</span>
+                        </div>
+
+                        <div className='flex items-center text-gray-600 text-sm'>
+                          <Clock className='h-4 w-4 mr-1' />
+                          <span>Duration: {booking.duration} months</span>
+                        </div>
+
+                        <div className='flex items-center text-gray-900 font-semibold'>
+                          <CreditCard className='h-4 w-4 mr-1' />
+                          <span>₹{booking.totalAmount.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className='flex flex-col gap-2 lg:min-w-[120px]'>
                         <Button
                           size='sm'
-                          variant='destructive'
-                          onClick={() => cancelBooking(booking.id)}
+                          variant='outline'
+                          onClick={() =>
+                            (window.location.href = `/messages?provider=${booking.provider.id}`)
+                          }
                         >
-                          Cancel
+                          <MessageCircle className='h-4 w-4 mr-1' />
+                          Message
                         </Button>
-                      )}
 
-                      <Button
-                        size='sm'
-                        variant='ghost'
-                        onClick={() => (window.location.href = `/bookings/${booking.id}`)}
-                      >
-                        View Details
-                      </Button>
+                        {booking.status === 'pending' &&
+                          typeof booking.id === 'string' &&
+                          booking.id && (
+                            <Button
+                              size='sm'
+                              variant='destructive'
+                              onClick={() => cancelBooking(booking.id as string)}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+
+                        <Button
+                          size='sm'
+                          variant='ghost'
+                          onClick={() => (window.location.href = `/bookings/${booking.id}`)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Request Date */}
-                  <div className='mt-4 pt-4 border-t border-gray-100'>
-                    <p className='text-sm text-gray-600'>
-                      Requested on {new Date(booking.requestDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    {/* Request Date */}
+                    <div className='mt-4 pt-4 border-t border-gray-100'>
+                      <p className='text-sm text-gray-600'>
+                        Requested on {new Date(booking.requestDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            )}
           </div>
         )}
       </div>

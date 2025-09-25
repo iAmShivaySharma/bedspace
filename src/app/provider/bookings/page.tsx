@@ -55,7 +55,7 @@ export default function ProviderBookingsPage() {
     status: statusFilter === 'all' ? undefined : statusFilter,
   });
 
-  const user = userResponse?.data as Provider;
+  const user = userResponse?.data as unknown as Provider;
   const bookings = bookingsResponse?.data || [];
 
   if (!user || user.role !== 'provider') {

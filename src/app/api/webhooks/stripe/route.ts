@@ -190,7 +190,7 @@ async function handleTransferUpdated(transfer: Stripe.Transfer) {
   }
 
   // Update transfer status
-  localTransfer.status = transfer.status || 'pending';
+  localTransfer.status = 'completed';
   await localTransfer.save();
 }
 
