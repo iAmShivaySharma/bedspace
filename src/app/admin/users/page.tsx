@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Search, Filter, MoreHorizontal, Shield, Ban, Mail, Phone } from 'lucide-react';
 import {
   DropdownMenu,
@@ -108,16 +109,7 @@ export default function AdminUsersPage() {
   );
 
   if (loading) {
-    return (
-      <DashboardLayout title='User Management'>
-        <div className='flex items-center justify-center py-12'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-600'>Loading users...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageSkeleton type='list' />;
   }
 
   return (

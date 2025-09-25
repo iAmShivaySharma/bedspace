@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import DocumentUpload from '@/components/ui/document-upload';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Upload, FileText, CheckCircle, XCircle, Clock, AlertCircle, Shield } from 'lucide-react';
 
 interface VerificationData {
@@ -169,16 +170,7 @@ export default function ProviderVerificationPage() {
   };
 
   if (loading) {
-    return (
-      <DashboardLayout title='Verification'>
-        <div className='flex items-center justify-center py-12'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-600'>Loading verification data...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageSkeleton type='form' />;
   }
 
   return (

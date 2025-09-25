@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticate } from '@/middleware/auth';
 import connectDB from '@/lib/mongodb';
+import { Favorite } from '@/models/Favorite';
+import { Listing } from '@/models/Listing';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,42 +24,41 @@ export async function GET(request: NextRequest) {
 
     await connectDB();
 
-    // In production, you would query a Favorites collection
-    // For now, return realistic mock data
-    const locations = ['Bandra West', 'Andheri East', 'Powai', 'Thane', 'Worli'];
-    const titles = [
-      'Modern Private Room',
-      'Cozy Studio',
-      'Shared Space Near Metro',
-      'Luxury Apartment',
-      'Budget Friendly Room',
-    ];
-    const providers = ['John Smith', 'Sarah Johnson', 'Mike Wilson', 'Alice Brown', 'David Lee'];
-    const amenitiesList = [
-      ['wifi', 'ac', 'kitchen'],
-      ['wifi', 'laundry', 'parking'],
-      ['pool', 'gym', 'parking'],
-      ['wifi', 'ac', 'security'],
-      ['kitchen', 'laundry', 'wifi'],
-    ];
+    // Get user's favorites with populated listing data
+    const favorites = await Favorite.find({ seekerId: user._id })
+      .populate({
+        path: 'listingId',
+        populate: {
+          path: 'providerId',
+          select: 'name email rating totalReviews',
+        },
+      })
+      .sort({ createdAt: -1 })
+      .exec();
 
-    const favorites = Array.from({ length: Math.floor(Math.random() * 6) + 3 }, (_, i) => ({
-      id: i + 1,
-      title: titles[Math.floor(Math.random() * titles.length)],
-      location: `${locations[Math.floor(Math.random() * locations.length)]}, Mumbai`,
-      price: Math.floor(Math.random() * 15000) + 5000, // 5000-20000
-      rating: (Math.random() * 1.5 + 3.5).toFixed(1), // 3.5-5.0
-      provider: providers[Math.floor(Math.random() * providers.length)],
-      amenities: amenitiesList[Math.floor(Math.random() * amenitiesList.length)],
-      status: Math.random() > 0.8 ? 'booked' : 'available',
-      savedDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .split('T')[0],
-    }));
+    // Format the response to match the frontend expectations
+    const formattedFavorites = favorites
+      .filter(fav => fav.listingId) // Only include favorites where listing still exists
+      .map(favorite => ({
+        id: favorite.listingId._id,
+        title: favorite.listingId.title,
+        location: `${favorite.listingId.address}, ${favorite.listingId.city}`,
+        price: favorite.listingId.rent,
+        rating: favorite.listingId.providerId.rating || 4.0,
+        reviewCount: favorite.listingId.providerId.totalReviews || 0,
+        provider: favorite.listingId.providerId.name,
+        amenities: favorite.listingId.facilities,
+        image: favorite.listingId.images?.[0]?.fileUrl || null,
+        savedDate: favorite.createdAt,
+        status:
+          favorite.listingId.isActive && favorite.listingId.isApproved
+            ? 'available'
+            : 'unavailable',
+      }));
 
     return NextResponse.json({
       success: true,
-      data: favorites,
+      data: formattedFavorites,
     });
   } catch (error) {
     console.error('Get seeker favorites error:', error);
@@ -65,5 +66,67 @@ export async function GET(request: NextRequest) {
       { success: false, error: 'Failed to get seeker favorites' },
       { status: 500 }
     );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { user, error } = await authenticate(request);
+
+    if (error || !user) {
+      return NextResponse.json(
+        { success: false, error: error || 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    if (user.role !== 'seeker') {
+      return NextResponse.json(
+        { success: false, error: 'Seeker access required' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { listingId } = body;
+
+    if (!listingId) {
+      return NextResponse.json(
+        { success: false, error: 'Listing ID is required' },
+        { status: 400 }
+      );
+    }
+
+    await connectDB();
+
+    // Check if listing exists
+    const listing = await Listing.findById(listingId);
+    if (!listing) {
+      return NextResponse.json({ success: false, error: 'Listing not found' }, { status: 404 });
+    }
+
+    // Create or update favorite
+    const favorite = await Favorite.findOneAndUpdate(
+      { seekerId: user._id, listingId },
+      { seekerId: user._id, listingId },
+      { upsert: true, new: true }
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: 'Added to favorites',
+      data: favorite,
+    });
+  } catch (error: any) {
+    // Handle duplicate key error (already favorited)
+    if (error.code === 11000) {
+      return NextResponse.json({
+        success: true,
+        message: 'Already in favorites',
+      });
+    }
+
+    console.error('Add favorite error:', error);
+    return NextResponse.json({ success: false, error: 'Failed to add favorite' }, { status: 500 });
   }
 }

@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import {
   User,
   Mail,
@@ -155,11 +156,7 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
-      </div>
-    );
+    return <PageSkeleton type='form' />;
   }
 
   if (!profile) {
@@ -193,7 +190,7 @@ export default function ProfilePage() {
             <div className='flex gap-2'>
               <Button onClick={handleSave} disabled={saving} className='flex items-center gap-2'>
                 {saving ? (
-                  <div className='animate-spin rounded-full h-4 w-4 border-b-2 border-white'></div>
+                  <div className='REMOVED_SPINNER rounded-full h-4 w-4 border-b-2 border-white'></div>
                 ) : (
                   <Save className='h-4 w-4' />
                 )}

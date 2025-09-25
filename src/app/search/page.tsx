@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import HomeHeader from '@/components/layout/HomeHeader';
@@ -265,11 +266,7 @@ function SearchPageContent() {
         </div>
 
         {/* Loading */}
-        {loading && (
-          <div className='flex items-center justify-center py-12'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
-          </div>
-        )}
+        {loading && <PageSkeleton />}
 
         {/* Results Grid */}
         {!loading && (
@@ -371,11 +368,9 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-600'>Loading search...</p>
-          </div>
+        <div className='min-h-screen bg-gray-50'>
+          <HomeHeader />
+          <PageSkeleton />
         </div>
       }
     >

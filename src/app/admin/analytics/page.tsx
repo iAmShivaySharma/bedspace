@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import {
   TrendingUp,
   TrendingDown,
@@ -119,31 +120,20 @@ export default function AdminAnalyticsPage() {
   };
 
   if (loading) {
-    return (
-      <DashboardLayout title='Analytics'>
-        <div className='flex items-center justify-center py-12'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-600'>Loading analytics...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageSkeleton type='analytics' />;
   }
 
   if (error || !analytics) {
     return (
-      <DashboardLayout title='Analytics'>
-        <div className='text-center py-12'>
-          <p className='text-red-600 mb-4'>{error || 'Failed to load analytics'}</p>
-          <Button onClick={fetchAnalytics}>Retry</Button>
-        </div>
-      </DashboardLayout>
+      <div className='text-center py-12'>
+        <p className='text-red-600 mb-4'>{error || 'Failed to load analytics'}</p>
+        <Button onClick={fetchAnalytics}>Retry</Button>
+      </div>
     );
   }
 
   return (
-    <DashboardLayout title='Analytics'>
+    <DashboardLayout title='Admin Analytics'>
       {/* Time Range Selector */}
       <div className='mb-6 flex justify-between items-center'>
         <div>

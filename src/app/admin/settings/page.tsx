@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import {
   Settings,
   Save,
@@ -131,11 +132,7 @@ export default function SettingsPage() {
   ];
 
   if (loading) {
-    return (
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
-      </div>
-    );
+    return <PageSkeleton type='form' />;
   }
 
   if (!settings) {
@@ -164,7 +161,11 @@ export default function SettingsPage() {
           </div>
 
           <Button onClick={saveSettings} disabled={saving} className='flex items-center gap-2'>
-            {saving ? <RefreshCw className='h-4 w-4 animate-spin' /> : <Save className='h-4 w-4' />}
+            {saving ? (
+              <RefreshCw className='h-4 w-4 skeleton-loading' />
+            ) : (
+              <Save className='h-4 w-4' />
+            )}
             {saving ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>

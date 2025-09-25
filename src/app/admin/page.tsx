@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import {
   CheckCircle,
   XCircle,
@@ -16,20 +17,34 @@ import {
   Building,
   Calendar,
 } from 'lucide-react';
-
-interface Provider {
-  _id: string;
-  name: string;
-  email: string;
-  businessName?: string;
-  verificationStatus: string;
-  verificationDocuments: any[];
-  createdAt: string;
-}
+import {
+  useGetAdminStatsQuery,
+  useGetAdminProvidersQuery,
+  useAdminUserActionMutation,
+} from '@/lib/api/adminApi';
+import { useGetRecentActivitiesQuery } from '@/lib/api/commonApi';
+import type { Provider } from '@/types';
 
 export default function AdminPage() {
-  const [providers, setProviders] = useState<Provider[]>([]);
-  const [stats, setStats] = useState({
+  const [filter, setFilter] = useState('pending');
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  // RTK Query hooks
+  const { data: statsData, isLoading: statsLoading } = useGetAdminStatsQuery();
+  const {
+    data: providersData,
+    isLoading: providersLoading,
+    refetch: refetchProviders,
+  } = useGetAdminProvidersQuery({
+    search: filter === 'all' ? undefined : filter,
+  });
+  const { data: activitiesData, isLoading: activitiesLoading } = useGetRecentActivitiesQuery({
+    limit: 10,
+  });
+  const [adminUserAction] = useAdminUserActionMutation();
+
+  const stats = statsData?.data || {
     totalUsers: 0,
     totalProviders: 0,
     totalSeekers: 0,
@@ -40,92 +55,31 @@ export default function AdminPage() {
     activeListings: 0,
     totalBookings: 0,
     revenue: 0,
-  });
-  const [activities, setActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('pending');
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
+  };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch admin stats
-        const statsResponse = await fetch('/api/admin/stats', {
-          credentials: 'include',
-        });
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData.data);
-        }
-
-        // Fetch providers
-        const response = await fetch(`/api/admin/providers?status=${filter}`, {
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          setProviders(result.data);
-        } else if (response.status === 403) {
-          setError('Admin access required');
-        } else {
-          const result = await response.json();
-          setError(result.error || 'Failed to fetch providers');
-        }
-
-        // Fetch recent activities
-        const activitiesResponse = await fetch('/api/activities/recent?limit=10', {
-          credentials: 'include',
-        });
-
-        if (activitiesResponse.ok) {
-          const activitiesResult = await activitiesResponse.json();
-          setActivities(activitiesResult.data || []);
-        }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setError('Network error. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [filter]);
+  const providers = (providersData?.data || []) as Provider[];
+  const activities = activitiesData?.data || [];
+  const loading = statsLoading || providersLoading;
 
   const handleStatusUpdate = async (
     providerId: string,
-    status: string,
-    rejectionReason?: string
+    action: 'activate' | 'deactivate' | 'verify' | 'unverify'
   ) => {
     try {
-      const response = await fetch('/api/admin/providers', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          providerId,
-          status,
-          rejectionReason,
-        }),
-      });
-
-      const result = await response.json();
-
+      const result = await adminUserAction({ userId: providerId, action }).unwrap();
       if (result.success) {
-        setMessage(`Provider ${status} successfully!`);
+        setMessage(`Provider ${action}d successfully!`);
         setError('');
-        // Remove provider from current list if status changed
-        setProviders(prev => prev.filter(p => p._id !== providerId));
+        // Refetch providers to update the list
+        refetchProviders();
       } else {
-        setError(result.error || `Failed to ${status} provider`);
+        setError(result.error || `Failed to ${action} provider`);
         setMessage('');
       }
-    } catch (error) {
-      setError('Network error. Please try again.');
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.error || error?.message || 'Network error. Please try again.';
+      setError(errorMessage);
       setMessage('');
     }
   };
@@ -155,16 +109,7 @@ export default function AdminPage() {
   };
 
   if (loading) {
-    return (
-      <DashboardLayout title='Admin Dashboard'>
-        <div className='flex items-center justify-center py-12'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-600'>Loading providers...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageSkeleton type='dashboard' />;
   }
 
   return (
@@ -320,7 +265,7 @@ export default function AdminPage() {
                     <div>
                       <h4 className='font-medium mb-2'>Uploaded Documents:</h4>
                       <div className='flex flex-wrap gap-2'>
-                        {provider.verificationDocuments.map((doc, index) => (
+                        {provider.verificationDocuments.map((doc: any, index: number) => (
                           <Badge key={index} variant='outline' className='text-xs'>
                             {doc.type.replace('_', ' ')}
                           </Badge>
@@ -334,7 +279,7 @@ export default function AdminPage() {
                     <div className='flex space-x-3 pt-4 border-t'>
                       <Button
                         size='sm'
-                        onClick={() => handleStatusUpdate(provider._id, 'approved')}
+                        onClick={() => handleStatusUpdate(provider._id, 'verify')}
                         className='bg-green-600 hover:bg-green-700'
                       >
                         <CheckCircle className='w-4 h-4 mr-1' />
@@ -343,12 +288,7 @@ export default function AdminPage() {
                       <Button
                         size='sm'
                         variant='destructive'
-                        onClick={() => {
-                          const reason = prompt('Please provide a rejection reason:');
-                          if (reason) {
-                            handleStatusUpdate(provider._id, 'rejected', reason);
-                          }
-                        }}
+                        onClick={() => handleStatusUpdate(provider._id, 'unverify')}
                       >
                         <XCircle className='w-4 h-4 mr-1' />
                         Reject

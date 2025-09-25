@@ -144,20 +144,23 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
   };
 
   const isActive = (href: string) => {
-    // Exact match for root paths
-    if (href === '/dashboard' || href === '/admin' || href === '/search') {
-      return pathname === href;
-    }
-
-    // For nested paths, check if pathname starts with href but not with other similar paths
+    // Exact match first
     if (pathname === href) {
       return true;
     }
 
-    // Check if current path is a child of this href
+    // Exact match for root paths - no children should match
+    if (href === '/dashboard' || href === '/admin' || href === '/search') {
+      return pathname === href;
+    }
+
+    // Special handling for provider listings to avoid conflicts
+    if (href === '/provider/listings' && pathname.startsWith('/provider/listings/')) {
+      return false; // Don't highlight "My Listings" when on sub-pages like /provider/listings/new
+    }
+
+    // For other nested paths, check if pathname starts with href but ensure exact segment matching
     if (pathname.startsWith(href + '/')) {
-      // Make sure it's not matching a similar path
-      // For example, /admin/users should not match /admin/user-settings
       const pathSegments = pathname.split('/');
       const hrefSegments = href.split('/');
 

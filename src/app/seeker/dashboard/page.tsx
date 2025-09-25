@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import {
   Search,
   Heart,
@@ -84,16 +85,7 @@ export default function SeekerDashboard() {
   }, [router]);
 
   if (loading) {
-    return (
-      <DashboardLayout title='Seeker Dashboard'>
-        <div className='flex items-center justify-center py-12'>
-          <div className='text-center'>
-            <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
-            <p className='text-gray-600'>Loading dashboard...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageSkeleton type='dashboard' />;
   }
 
   const getStatusIcon = (status: string) => {

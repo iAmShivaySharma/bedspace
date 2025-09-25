@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, User, Clock, CreditCard, MessageCircle } from 'lucide-react';
+import { useGetSeekerBookingsQuery, useCancelBookingRequestMutation } from '@/lib/api/seekerApi';
+import { toast } from 'sonner';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 
-interface Booking {
+// Interface for the populated booking data returned by API
+interface PopulatedBooking {
   id: string;
   listing: {
     id: string;
@@ -20,17 +24,20 @@ interface Booking {
     id: string;
     name: string;
     email: string;
-    phone?: string;
+    phone: string;
   };
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   checkIn: string;
-  checkOut?: string;
+  checkOut?: string | null;
   duration: number;
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentStatus: string;
   createdAt: string;
   requestDate: string;
   moveInDate: string;
+  message: string;
+  responseMessage?: string;
+  respondedAt?: string;
 }
 
 const statusColors = {
@@ -49,43 +56,25 @@ const paymentStatusColors = {
 };
 
 export default function BookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const {
+    data: bookingsResponse,
+    isLoading,
+    error,
+  } = useGetSeekerBookingsQuery({
+    status: filter === 'all' ? undefined : filter,
+  });
+  const [cancelBookingRequest] = useCancelBookingRequestMutation();
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
-
-  const fetchBookings = async () => {
-    try {
-      const response = await fetch('/api/seeker/bookings', {
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setBookings(data.data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const bookings: unknown = bookingsResponse?.data || [];
 
   const cancelBooking = async (bookingId: string) => {
     try {
-      const response = await fetch(`/api/seeker/bookings/${bookingId}/cancel`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        fetchBookings(); // Refresh bookings
-      }
+      await cancelBookingRequest(bookingId).unwrap();
+      toast.success('Booking cancelled successfully');
     } catch (error) {
       console.error('Error cancelling booking:', error);
+      toast.error('Failed to cancel booking');
     }
   };
 
@@ -93,24 +82,8 @@ export default function BookingsPage() {
     booking => filter === 'all' || booking.status === filter
   );
 
-  if (loading) {
-    return (
-      <DashboardLayout title='My Bookings'>
-        <div className='p-6 space-y-6'>
-          <div className='space-y-4'>
-            {[1, 2, 3].map(i => (
-              <Card key={i} className='animate-pulse'>
-                <CardContent className='p-6'>
-                  <div className='h-6 bg-gray-200 rounded mb-4'></div>
-                  <div className='h-4 bg-gray-200 rounded mb-2'></div>
-                  <div className='h-4 bg-gray-200 rounded'></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+  if (isLoading) {
+    return <PageSkeleton type='list' />;
   }
 
   return (
@@ -195,7 +168,13 @@ export default function BookingsPage() {
                         <Badge className={statusColors[booking.status]}>
                           {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
                         </Badge>
-                        <Badge className={paymentStatusColors[booking.paymentStatus]}>
+                        <Badge
+                          className={
+                            paymentStatusColors[
+                              booking.paymentStatus as keyof typeof paymentStatusColors
+                            ] || 'bg-gray-100 text-gray-800'
+                          }
+                        >
                           {booking.paymentStatus.charAt(0).toUpperCase() +
                             booking.paymentStatus.slice(1)}
                         </Badge>

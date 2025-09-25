@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useLoginMutation } from '@/lib/api/authApi';
 
 interface LoginFormData {
   identifier: string;
@@ -21,8 +22,8 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onSuccess, onError }: LoginFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [login, { isLoading }] = useLoginMutation();
 
   const {
     register,
@@ -33,28 +34,17 @@ export default function LoginForm({ onSuccess, onError }: LoginFormProps) {
   });
 
   const onSubmit = async (data: LoginFormData) => {
-    setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        // Token is now stored in httpOnly cookie by the server
+      const result = await login(data).unwrap();
+      if (result.success && result.data) {
         onSuccess(result.data);
       } else {
         onError(result.error || 'Login failed');
       }
-    } catch (error) {
-      onError('Network error. Please try again.');
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.error || error?.message || 'Network error. Please try again.';
+      onError(errorMessage);
     }
   };
 

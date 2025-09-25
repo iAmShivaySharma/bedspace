@@ -29,6 +29,60 @@ npm run seed:users         # Seed test users
 npm run seed:data          # Seed sample data
 ```
 
+## Redux Toolkit Query (RTK Query) Integration
+
+The application uses Redux Toolkit Query for efficient API state management, caching, and data fetching.
+
+### Key Features
+
+- **Automatic caching** with intelligent invalidation
+- **Real-time loading and error states**
+- **Optimistic updates** for better UX
+- **TypeScript integration** with full type safety
+- **Background refetching** and polling support
+
+### Quick Usage
+
+```tsx
+// Query Hook Example
+import { useGetAdminStatsQuery } from '@/lib/api/adminApi';
+
+function Dashboard() {
+  const { data, isLoading, error, refetch } = useGetAdminStatsQuery();
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error loading data</div>;
+
+  return <div>Total Users: {data?.data?.totalUsers}</div>;
+}
+
+// Mutation Hook Example
+import { useCreateListingMutation } from '@/lib/api/providerApi';
+
+function CreateListingForm() {
+  const [createListing, { isLoading, error }] = useCreateListingMutation();
+
+  const handleSubmit = async formData => {
+    try {
+      const result = await createListing(formData).unwrap();
+      console.log('Success:', result);
+    } catch (error) {
+      console.error('Failed:', error);
+    }
+  };
+}
+```
+
+### Available API Endpoints
+
+- **Auth**: `useLoginMutation`, `useGetCurrentUserQuery`, `useLogoutMutation`
+- **Admin**: `useGetAdminStatsQuery`, `useGetAdminUsersQuery`, `useAdminUserActionMutation`
+- **Seeker**: `useSearchListingsQuery`, `useCreateBookingRequestMutation`, `useGetSeekerFavoritesQuery`
+- **Provider**: `useGetProviderListingsQuery`, `useCreateListingMutation`, `useUpdateListingMutation`
+- **Common**: `useGetNotificationsQuery`, `useSendMessageMutation`, `useGetUserProfileQuery`
+
+See `RTK_QUERY_GUIDE.md` for comprehensive documentation and best practices.
+
 ## Architecture Overview
 
 ### Tech Stack
@@ -131,6 +185,11 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
+
+# Stripe Payments
+STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key
+STRIPE_SECRET_KEY=sk_test_your_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
 ```
 
 ## Development Notes

@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Heart, MapPin, Star, Wifi, Car, Coffee, Trash2 } from 'lucide-react';
+import { useGetSeekerFavoritesQuery, useRemoveFromFavoritesMutation } from '@/lib/api/seekerApi';
+import { toast } from 'sonner';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 
 interface FavoriteListing {
   id: string;
@@ -15,48 +18,36 @@ interface FavoriteListing {
   reviewCount: number;
   provider: string;
   amenities: string[];
-  image: string;
+  image: string | null;
   savedDate: string;
   status: 'available' | 'unavailable';
 }
 
 export default function FavoritesPage() {
-  const [favorites, setFavorites] = useState<FavoriteListing[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: favoritesResponse, isLoading, error } = useGetSeekerFavoritesQuery({});
+  const [removeFromFavorites] = useRemoveFromFavoritesMutation();
 
-  useEffect(() => {
-    fetchFavorites();
-  }, []);
-
-  const fetchFavorites = async () => {
-    try {
-      const response = await fetch('/api/seeker/favorites', {
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setFavorites(data.data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching favorites:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const favorites: FavoriteListing[] = (favoritesResponse?.data || []).map((listing: any) => ({
+    id: listing.id,
+    title: listing.title,
+    location: listing.location,
+    price: listing.price,
+    rating: listing.rating,
+    reviewCount: listing.reviewCount,
+    provider: listing.provider,
+    amenities: listing.amenities,
+    image: listing.image ?? null,
+    savedDate: listing.savedDate,
+    status: listing.status,
+  }));
 
   const removeFavorite = async (listingId: string) => {
     try {
-      const response = await fetch(`/api/seeker/favorites/${listingId}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        setFavorites(favorites.filter(fav => fav.id !== listingId));
-      }
+      await removeFromFavorites(listingId).unwrap();
+      toast.success('Removed from favorites');
     } catch (error) {
       console.error('Error removing favorite:', error);
+      toast.error('Failed to remove favorite');
     }
   };
 
@@ -73,25 +64,8 @@ export default function FavoritesPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <DashboardLayout title='Favorite Listings'>
-        <div className='p-6 space-y-6'>
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-            {[1, 2, 3, 4, 5, 6].map(i => (
-              <Card key={i} className='animate-pulse'>
-                <div className='h-48 bg-gray-200 rounded-t-lg'></div>
-                <CardContent className='p-4'>
-                  <div className='h-4 bg-gray-200 rounded mb-2'></div>
-                  <div className='h-3 bg-gray-200 rounded mb-4'></div>
-                  <div className='h-6 bg-gray-200 rounded'></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+  if (isLoading) {
+    return <PageSkeleton />;
   }
 
   return (
@@ -177,12 +151,12 @@ export default function FavoritesPage() {
 
                   <div className='flex items-center justify-between mb-3'>
                     <div className='flex space-x-2'>
-                      {listing.amenities.slice(0, 3).map(amenity => (
+                      {listing.amenities?.slice(0, 3).map((amenity: string) => (
                         <div key={amenity} className='flex items-center text-gray-600'>
                           {getAmenityIcon(amenity)}
                         </div>
                       ))}
-                      {listing.amenities.length > 3 && (
+                      {listing.amenities && listing.amenities.length > 3 && (
                         <span className='text-sm text-gray-500'>
                           +{listing.amenities.length - 3} more
                         </span>

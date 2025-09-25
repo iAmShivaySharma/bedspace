@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import { Listing } from '@/models/Listing';
 import { requireProviderVerification } from '@/middleware/verification';
+import { authenticate } from '@/middleware/auth';
 
 export async function GET(request: NextRequest) {
   try {
     // Check provider verification
     const verificationError = await requireProviderVerification(request);
     if (verificationError) return verificationError;
+
+    // Get authenticated user
+    const { user } = await authenticate(request);
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
 
     await connectDB();
 
@@ -17,11 +24,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
 
-    const query: any = {};
-    if (status) query.status = status;
+    const query: any = {
+      providerId: user._id, // Only get listings for the current provider
+    };
+    if (status) query.isActive = status === 'active';
 
     const listings = await Listing.find(query)
-      .populate('provider', 'name email')
+      .populate('providerId', 'name email')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -58,26 +67,64 @@ export async function POST(request: NextRequest) {
     if (verificationError) return verificationError;
 
     const body = await request.json();
-    const { title, description, price, location, amenities, images, availability } = body;
+    const {
+      title,
+      description,
+      address,
+      city,
+      state,
+      pincode,
+      rent,
+      securityDeposit,
+      roomType,
+      genderPreference,
+      facilities,
+      availableFrom,
+    } = body;
 
-    if (!title || !description || !price || !location) {
+    if (
+      !title ||
+      !description ||
+      !address ||
+      !city ||
+      !state ||
+      !pincode ||
+      !rent ||
+      !securityDeposit ||
+      !roomType ||
+      !genderPreference ||
+      !availableFrom
+    ) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
+    // Get authenticated user
+    const { user } = await authenticate(request);
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     await connectDB();
 
     const listing = new Listing({
+      providerId: user._id,
       title,
       description,
-      price,
-      location,
-      amenities: amenities || [],
-      images: images || [],
-      availability: availability || {},
-      status: 'pending', // All new listings start as pending for admin approval
+      address,
+      city: city.toLowerCase(),
+      state,
+      pincode,
+      rent,
+      securityDeposit,
+      roomType,
+      genderPreference,
+      facilities: facilities || [],
+      availableFrom: new Date(availableFrom),
+      isActive: true,
+      isApproved: false, // All new listings need admin approval
     });
 
     await listing.save();

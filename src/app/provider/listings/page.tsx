@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 import VerificationRequired from '@/components/ui/verification-required';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,13 +75,7 @@ export default function ProviderListingsPage() {
   }, [router]);
 
   if (loading) {
-    return (
-      <DashboardLayout title='My Listings'>
-        <div className='flex items-center justify-center py-12'>
-          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600'></div>
-        </div>
-      </DashboardLayout>
-    );
+    return <PageSkeleton />;
   }
 
   if (!user || user.role !== 'provider') {
