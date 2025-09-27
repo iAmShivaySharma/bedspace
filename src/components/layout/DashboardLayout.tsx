@@ -23,7 +23,13 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, title }: DashboardLayoutProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebarOpen');
+      return saved !== null ? JSON.parse(saved) : true;
+    }
+    return true;
+  });
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const router = useRouter();
 
@@ -54,7 +60,9 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
   };
 
   const handleSidebarToggle = () => {
-    setSidebarOpen(!sidebarOpen);
+    const newState = !sidebarOpen;
+    setSidebarOpen(newState);
+    localStorage.setItem('sidebarOpen', JSON.stringify(newState));
   };
 
   if (loading) {

@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateListingMutation } from '@/lib/api/providerApi';
 import { ROOM_TYPES, GENDER_PREFERENCES, FACILITIES, INDIAN_STATES } from '@/constants';
-import { ArrowLeft, Home, Loader2 } from 'lucide-react';
+import { ArrowLeft, Home, Loader2, Plus, X, Upload, FileText, Image, Video } from 'lucide-react';
 
 const listingSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters').max(100, 'Title too long'),
@@ -42,6 +42,17 @@ export default function AddListingPage() {
   const router = useRouter();
   const [createListing, { isLoading }] = useCreateListingMutation();
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
+  const [customFacilities, setCustomFacilities] = useState<string[]>([]);
+  const [newCustomFacility, setNewCustomFacility] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<{
+    images: File[];
+    videos: File[];
+    documents: File[];
+  }>({
+    images: [],
+    videos: [],
+    documents: [],
+  });
 
   const {
     register,
@@ -59,9 +70,11 @@ export default function AddListingPage() {
 
   const onSubmit = async (data: ListingFormData) => {
     try {
+      const allFacilities = [...selectedFacilities, ...customFacilities];
+
       const result = await createListing({
         ...data,
-        facilities: selectedFacilities,
+        facilities: allFacilities,
       }).unwrap();
 
       if (result.success) {
@@ -81,6 +94,62 @@ export default function AddListingPage() {
     setValue('facilities', updated);
   };
 
+  const addCustomFacility = () => {
+    if (newCustomFacility.trim() && !customFacilities.includes(newCustomFacility.trim())) {
+      const updated = [...customFacilities, newCustomFacility.trim()];
+      setCustomFacilities(updated);
+      setNewCustomFacility('');
+    }
+  };
+
+  const removeCustomFacility = (facility: string) => {
+    setCustomFacilities(customFacilities.filter(f => f !== facility));
+  };
+
+  const handleFileUpload = (files: FileList | null, type: 'images' | 'videos' | 'documents') => {
+    if (!files) return;
+
+    const validFiles = Array.from(files).filter(file => {
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+        return false;
+      }
+
+      if (type === 'images') {
+        return file.type.startsWith('image/');
+      } else if (type === 'videos') {
+        return file.type.startsWith('video/');
+      } else if (type === 'documents') {
+        return file.type === 'application/pdf' || file.type.startsWith('application/');
+      }
+      return true;
+    });
+
+    setUploadedFiles(prev => ({
+      ...prev,
+      [type]: [...prev[type], ...validFiles],
+    }));
+  };
+
+  const removeFile = (fileName: string, type: 'images' | 'videos' | 'documents') => {
+    setUploadedFiles(prev => ({
+      ...prev,
+      [type]: prev[type].filter(file => file.name !== fileName),
+    }));
+  };
+
+  const getFileIcon = (type: 'images' | 'videos' | 'documents') => {
+    switch (type) {
+      case 'images':
+        return <Image className='w-4 h-4' />;
+      case 'videos':
+        return <Video className='w-4 h-4' />;
+      case 'documents':
+        return <FileText className='w-4 h-4' />;
+    }
+  };
+
   return (
     <DashboardLayout title='Add New Listing'>
       <div className='space-y-6'>
@@ -90,7 +159,7 @@ export default function AddListingPage() {
             <ArrowLeft className='w-4 h-4' />
           </Button>
           <div>
-            <h1 className='text-2xl font-bold text-gray-900'>Add New Listing</h1>
+            <h1 className='text-2xl font-bold text-gray-900'>Listing Details</h1>
             <p className='text-gray-600'>Create a new bed space listing</p>
           </div>
         </div>
@@ -277,28 +346,227 @@ export default function AddListingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Facilities & Amenities</CardTitle>
-              <CardDescription>Select all available facilities (optional)</CardDescription>
+              <CardDescription>Select available facilities and add custom ones</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'>
-                {FACILITIES.map(facility => (
-                  <label
-                    key={facility}
-                    className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                      selectedFacilities.includes(facility)
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-300'
-                    }`}
+            <CardContent className='space-y-6'>
+              {/* Standard Facilities */}
+              <div>
+                <h4 className='text-sm font-semibold mb-3'>Standard Facilities</h4>
+                <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3'>
+                  {FACILITIES.map(facility => (
+                    <label
+                      key={facility}
+                      className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                        selectedFacilities.includes(facility)
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type='checkbox'
+                        checked={selectedFacilities.includes(facility)}
+                        onChange={() => toggleFacility(facility)}
+                        className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+                      />
+                      <span className='text-sm font-medium'>{facility}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Facilities */}
+              <div>
+                <h4 className='text-sm font-semibold mb-3'>Custom Facilities</h4>
+                <div className='flex gap-2 mb-3'>
+                  <Input
+                    placeholder='Add custom facility (e.g., Study Room, Rooftop Access)'
+                    value={newCustomFacility}
+                    onChange={e => setNewCustomFacility(e.target.value)}
+                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), addCustomFacility())}
+                    className='flex-1'
+                  />
+                  <Button
+                    type='button'
+                    onClick={addCustomFacility}
+                    disabled={!newCustomFacility.trim()}
+                    variant='outline'
                   >
+                    <Plus className='w-4 h-4 mr-1' />
+                    Add
+                  </Button>
+                </div>
+
+                {/* Custom Facilities List */}
+                {customFacilities.length > 0 && (
+                  <div className='flex flex-wrap gap-2'>
+                    {customFacilities.map(facility => (
+                      <div
+                        key={facility}
+                        className='flex items-center space-x-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg'
+                      >
+                        <span className='text-sm font-medium text-green-800'>{facility}</span>
+                        <button
+                          type='button'
+                          onClick={() => removeCustomFacility(facility)}
+                          className='text-green-600 hover:text-green-800 transition-colors'
+                        >
+                          <X className='w-4 h-4' />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Media & Documents */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Media & Documents</CardTitle>
+              <CardDescription>
+                Upload images, videos, and documents for your listing
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-6'>
+              {/* Images Upload */}
+              <div>
+                <div className='flex items-center justify-between mb-3'>
+                  <h4 className='text-sm font-semibold'>Property Images</h4>
+                  <label className='cursor-pointer'>
                     <input
-                      type='checkbox'
-                      checked={selectedFacilities.includes(facility)}
-                      onChange={() => toggleFacility(facility)}
-                      className='rounded border-gray-300 text-blue-600 focus:ring-blue-500'
+                      type='file'
+                      multiple
+                      accept='image/*'
+                      onChange={e => handleFileUpload(e.target.files, 'images')}
+                      className='hidden'
                     />
-                    <span className='text-sm font-medium'>{facility}</span>
+                    <Button type='button' variant='outline' size='sm' asChild>
+                      <span>
+                        <Upload className='w-4 h-4 mr-1' />
+                        Add Images
+                      </span>
+                    </Button>
                   </label>
-                ))}
+                </div>
+                {uploadedFiles.images.length > 0 && (
+                  <div className='grid grid-cols-2 md:grid-cols-3 gap-3'>
+                    {uploadedFiles.images.map((file, index) => (
+                      <div key={index} className='relative p-3 border border-gray-200 rounded-lg'>
+                        <div className='flex items-center space-x-2'>
+                          {getFileIcon('images')}
+                          <span className='text-xs text-gray-600 truncate flex-1'>{file.name}</span>
+                          <button
+                            type='button'
+                            onClick={() => removeFile(file.name, 'images')}
+                            className='text-red-500 hover:text-red-700 transition-colors'
+                          >
+                            <X className='w-4 h-4' />
+                          </button>
+                        </div>
+                        <div className='text-xs text-gray-500 mt-1'>
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Videos Upload */}
+              <div>
+                <div className='flex items-center justify-between mb-3'>
+                  <h4 className='text-sm font-semibold'>Property Videos</h4>
+                  <label className='cursor-pointer'>
+                    <input
+                      type='file'
+                      multiple
+                      accept='video/*'
+                      onChange={e => handleFileUpload(e.target.files, 'videos')}
+                      className='hidden'
+                    />
+                    <Button type='button' variant='outline' size='sm' asChild>
+                      <span>
+                        <Upload className='w-4 h-4 mr-1' />
+                        Add Videos
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+                {uploadedFiles.videos.length > 0 && (
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                    {uploadedFiles.videos.map((file, index) => (
+                      <div key={index} className='relative p-3 border border-gray-200 rounded-lg'>
+                        <div className='flex items-center space-x-2'>
+                          {getFileIcon('videos')}
+                          <span className='text-xs text-gray-600 truncate flex-1'>{file.name}</span>
+                          <button
+                            type='button'
+                            onClick={() => removeFile(file.name, 'videos')}
+                            className='text-red-500 hover:text-red-700 transition-colors'
+                          >
+                            <X className='w-4 h-4' />
+                          </button>
+                        </div>
+                        <div className='text-xs text-gray-500 mt-1'>
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Documents Upload */}
+              <div>
+                <div className='flex items-center justify-between mb-3'>
+                  <h4 className='text-sm font-semibold'>Documents (PDF, etc.)</h4>
+                  <label className='cursor-pointer'>
+                    <input
+                      type='file'
+                      multiple
+                      accept='.pdf,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                      onChange={e => handleFileUpload(e.target.files, 'documents')}
+                      className='hidden'
+                    />
+                    <Button type='button' variant='outline' size='sm' asChild>
+                      <span>
+                        <Upload className='w-4 h-4 mr-1' />
+                        Add Documents
+                      </span>
+                    </Button>
+                  </label>
+                </div>
+                {uploadedFiles.documents.length > 0 && (
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                    {uploadedFiles.documents.map((file, index) => (
+                      <div key={index} className='relative p-3 border border-gray-200 rounded-lg'>
+                        <div className='flex items-center space-x-2'>
+                          {getFileIcon('documents')}
+                          <span className='text-xs text-gray-600 truncate flex-1'>{file.name}</span>
+                          <button
+                            type='button'
+                            onClick={() => removeFile(file.name, 'documents')}
+                            className='text-red-500 hover:text-red-700 transition-colors'
+                          >
+                            <X className='w-4 h-4' />
+                          </button>
+                        </div>
+                        <div className='text-xs text-gray-500 mt-1'>
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className='text-xs text-gray-500'>
+                <p>• Maximum file size: 10MB per file</p>
+                <p>
+                  • Supported formats: Images (JPG, PNG, etc.), Videos (MP4, MOV, etc.), Documents
+                  (PDF, DOC, etc.)
+                </p>
               </div>
             </CardContent>
           </Card>

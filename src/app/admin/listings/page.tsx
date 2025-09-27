@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +14,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useGetAdminListingsQuery, useAdminListingActionMutation } from '@/lib/api/adminApi';
 
-interface Listing {
+interface AdminListing {
   _id: string;
   title: string;
   description: string;
@@ -37,69 +38,41 @@ interface Listing {
 }
 
 export default function AdminListingsPage() {
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchListings();
-  }, [statusFilter, typeFilter]);
-
-  const fetchListings = async () => {
-    try {
-      const params = new URLSearchParams({
-        status: statusFilter,
-        type: typeFilter,
-        search: searchTerm,
-      });
-
-      const response = await fetch(`/api/admin/listings?${params}`, {
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setListings(result.data);
-      } else {
-        const result = await response.json();
-        setError(result.error || 'Failed to fetch listings');
-      }
-    } catch (error) {
-      console.error('Error fetching listings:', error);
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+  // Build filters object for the query
+  const filters = {
+    ...(statusFilter !== 'all' && { status: statusFilter }),
+    ...(typeFilter !== 'all' && { type: typeFilter }),
+    ...(searchTerm && { search: searchTerm }),
   };
+
+  const {
+    data: listingsResponse,
+    isLoading: loading,
+    error,
+    refetch: fetchListings,
+  } = useGetAdminListingsQuery(filters);
+
+  const [adminListingAction] = useAdminListingActionMutation();
+
+  const listings: AdminListing[] = (listingsResponse?.data as unknown as AdminListing[]) || [];
 
   const handleListingAction = async (
     listingId: string,
     action: 'approve' | 'reject' | 'deactivate' | 'activate'
   ) => {
     try {
-      const response = await fetch(`/api/admin/listings/${listingId}/${action}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        setMessage(`Listing ${action}d successfully`);
-        fetchListings();
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        const result = await response.json();
-        setError(result.error || `Failed to ${action} listing`);
-      }
-    } catch (error) {
+      await adminListingAction({ listingId, action }).unwrap();
+      setMessage(`Listing ${action}d successfully`);
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error: any) {
       console.error(`Error ${action}ing listing:`, error);
-      setError('Network error. Please try again.');
+      setMessage(error?.data?.error || `Failed to ${action} listing`);
+      setTimeout(() => setMessage(''), 5000);
     }
   };
 
@@ -131,13 +104,6 @@ export default function AdminListingsPage() {
     }
   };
 
-  const filteredListings = listings.filter(
-    listing =>
-      listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      listing.provider.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   if (loading) {
     return <PageSkeleton />;
   }
@@ -152,7 +118,11 @@ export default function AdminListingsPage() {
 
       {error && (
         <div className='mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded'>
-          {error}
+          {'data' in error
+            ? (error.data as any)?.error
+            : 'message' in error
+              ? error.message
+              : 'Failed to load listings'}
         </div>
       )}
 
@@ -189,16 +159,26 @@ export default function AdminListingsPage() {
             <option value='shared_room'>Shared Room</option>
             <option value='entire_place'>Entire Place</option>
           </select>
-          <Button onClick={fetchListings} variant='outline'>
+          <Button onClick={() => fetchListings()} variant='outline'>
             <Filter className='w-4 h-4 mr-2' />
             Refresh
+          </Button>
+          <Button
+            onClick={() => {
+              // Trigger search by updating the filters
+              fetchListings();
+            }}
+            className='bg-blue-600 hover:bg-blue-700'
+          >
+            <Search className='w-4 h-4 mr-2' />
+            Search
           </Button>
         </div>
       </div>
 
       {/* Listings Grid */}
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-        {filteredListings.map(listing => (
+        {listings.map(listing => (
           <Card key={listing._id} className='hover:shadow-md transition-shadow'>
             <CardHeader className='pb-3'>
               <div className='flex items-start justify-between'>
@@ -288,7 +268,7 @@ export default function AdminListingsPage() {
                 </div>
 
                 <div className='flex flex-wrap gap-1'>
-                  {listing.amenities.slice(0, 3).map(amenity => (
+                  {listing.amenities.slice(0, 3).map((amenity: string) => (
                     <span
                       key={amenity}
                       className='px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs'
@@ -312,7 +292,7 @@ export default function AdminListingsPage() {
         ))}
       </div>
 
-      {filteredListings.length === 0 && (
+      {listings.length === 0 && !loading && (
         <div className='text-center py-12 text-gray-500'>
           <p>No listings found matching your criteria</p>
         </div>

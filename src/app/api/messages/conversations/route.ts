@@ -1,14 +1,123 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth, AuthenticatedUser } from '@/middleware/auth';
-import { connectDB } from '@/lib/mongodb';
+import connectDB from '@/lib/mongodb';
+import { Conversation, Message } from '@/models/Message';
 import { logApiRequest, logError } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    logApiRequest('GET', '/api/messages/conversations', undefined, 200, Date.now() - startTime);
+    // Verify authentication
+    const authResult = await verifyAuth(request);
+    if (!authResult.success) {
+      logApiRequest('GET', '/api/messages/conversations', undefined, 401, Date.now() - startTime);
+      return NextResponse.json({ success: false, error: authResult.error }, { status: 401 });
+    }
 
+    const user = authResult.user as AuthenticatedUser;
+    await connectDB();
+
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1') || 1;
+    const limit = parseInt(searchParams.get('limit') || '20') || 20;
+
+    // Get user conversations with unread counts
+    const conversations = await (Conversation as any).getUserConversations(user.id, page, limit);
+
+    // Transform conversations to match expected format
+    const transformedConversations = await Promise.all(
+      conversations.map(async (conversation: any) => {
+        // Get the other participant (not the current user)
+        const otherParticipant = conversation.participants.find(
+          (p: any) => p._id.toString() !== user.id
+        );
+
+        // Get unread count for this conversation
+        const unreadCount = await Message.countDocuments({
+          conversationId: conversation._id,
+          receiverId: user.id,
+          isRead: false,
+        });
+
+        // Get recent messages for this conversation (last 5)
+        const recentMessages = await Message.find({
+          conversationId: conversation._id,
+        })
+          .populate('senderId', 'name avatar')
+          .sort({ createdAt: -1 })
+          .limit(5);
+
+        return {
+          id: conversation._id,
+          participant: {
+            id: otherParticipant._id,
+            name: otherParticipant.name,
+            avatar: otherParticipant.avatar || '/images/default-avatar.png',
+            role: otherParticipant.role,
+            email: otherParticipant.email,
+          },
+          lastMessage: conversation.lastMessage
+            ? {
+                content: conversation.lastMessage.content,
+                createdAt: conversation.lastMessage.createdAt.toISOString(),
+                senderId: conversation.lastMessage.senderId.toString(),
+                type: conversation.lastMessage.type || 'text',
+              }
+            : null,
+          unreadCount,
+          messageCount: conversation.messageCount,
+          createdAt: conversation.createdAt.toISOString(),
+          lastActivity: conversation.lastActivity.toISOString(),
+          listing: conversation.listingId
+            ? {
+                id: conversation.listingId,
+                title: conversation.listingTitle,
+              }
+            : null,
+          messages: recentMessages.reverse().map((message: any) => ({
+            id: message._id,
+            content: message.content,
+            senderId: message.senderId._id.toString(),
+            receiverId: message.receiverId.toString(),
+            type: message.type,
+            isRead: message.isRead,
+            createdAt: message.createdAt.toISOString(),
+            sender: {
+              id: message.senderId._id,
+              name: message.senderId.name,
+              avatar: message.senderId.avatar,
+            },
+          })),
+        };
+      })
+    );
+
+    logApiRequest('GET', '/api/messages/conversations', user.id, 200, Date.now() - startTime);
+
+    return NextResponse.json({
+      success: true,
+      data: transformedConversations,
+      pagination: {
+        page,
+        limit,
+        total: transformedConversations.length,
+      },
+    });
+  } catch (error) {
+    logError('Error in GET /api/messages/conversations:', error);
+    logApiRequest('GET', '/api/messages/conversations', undefined, 500, Date.now() - startTime);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch conversations' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
+  try {
     // Verify authentication
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
@@ -18,178 +127,72 @@ export async function GET(request: NextRequest) {
     const user = authResult.user as AuthenticatedUser;
     await connectDB();
 
-    // Mock conversations data - in real implementation, you'd have a Messages/Conversations model
-    const mockConversations = [
-      {
-        id: 'conv_001',
-        participant: {
-          id: 'user_002',
-          name: 'Rajesh Kumar',
-          avatar: '/images/avatar-1.jpg',
-          role: 'provider',
-        },
-        lastMessage: {
-          content: 'The room is available from next month. Would you like to schedule a visit?',
-          createdAt: '2024-01-20T15:30:00Z',
-          senderId: 'user_002',
-        },
-        unreadCount: 2,
-        messages: [
-          {
-            id: 'msg_001',
-            content: "Hi, I'm interested in your listing in Bandra West.",
-            senderId: user.id,
-            receiverId: 'user_002',
-            createdAt: '2024-01-20T14:00:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_002',
-            content: 'Hello! Thank you for your interest. The room is currently available.',
-            senderId: 'user_002',
-            receiverId: user.id,
-            createdAt: '2024-01-20T14:15:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_003',
-            content: 'Great! Can you tell me more about the amenities and nearby facilities?',
-            senderId: user.id,
-            receiverId: 'user_002',
-            createdAt: '2024-01-20T14:30:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_004',
-            content:
-              "The room comes with AC, WiFi, and kitchen access. There's a metro station 5 minutes away.",
-            senderId: 'user_002',
-            receiverId: user.id,
-            createdAt: '2024-01-20T15:00:00Z',
-            isRead: false,
-          },
-          {
-            id: 'msg_005',
-            content: 'The room is available from next month. Would you like to schedule a visit?',
-            senderId: 'user_002',
-            receiverId: user.id,
-            createdAt: '2024-01-20T15:30:00Z',
-            isRead: false,
-          },
-        ],
-      },
-      {
-        id: 'conv_002',
-        participant: {
-          id: 'user_003',
-          name: 'Priya Sharma',
-          avatar: '/images/avatar-2.jpg',
-          role: 'provider',
-        },
-        lastMessage: {
-          content: "Thank you for your interest. I'll get back to you soon.",
-          createdAt: '2024-01-19T11:20:00Z',
-          senderId: 'user_003',
-        },
-        unreadCount: 0,
-        messages: [
-          {
-            id: 'msg_006',
-            content: 'Hi, is the shared room in Andheri still available?',
-            senderId: user.id,
-            receiverId: 'user_003',
-            createdAt: '2024-01-19T10:00:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_007',
-            content: 'Yes, it is! Would you like to know more details?',
-            senderId: 'user_003',
-            receiverId: user.id,
-            createdAt: '2024-01-19T10:30:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_008',
-            content: "What are the house rules and what's included in the rent?",
-            senderId: user.id,
-            receiverId: 'user_003',
-            createdAt: '2024-01-19T11:00:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_009',
-            content: "Thank you for your interest. I'll get back to you soon.",
-            senderId: 'user_003',
-            receiverId: user.id,
-            createdAt: '2024-01-19T11:20:00Z',
-            isRead: true,
-          },
-        ],
-      },
-      {
-        id: 'conv_003',
-        participant: {
-          id: 'user_004',
-          name: 'Amit Patel',
-          avatar: '/images/avatar-3.jpg',
-          role: 'provider',
-        },
-        lastMessage: {
-          content: 'The studio apartment has been booked. Thank you!',
-          createdAt: '2024-01-18T16:45:00Z',
-          senderId: 'user_004',
-        },
-        unreadCount: 0,
-        messages: [
-          {
-            id: 'msg_010',
-            content: "Hello, I'm interested in the luxury studio in Powai.",
-            senderId: user.id,
-            receiverId: 'user_004',
-            createdAt: '2024-01-18T15:00:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_011',
-            content:
-              'Hi! The studio is beautiful and fully furnished. When are you looking to move in?',
-            senderId: 'user_004',
-            receiverId: user.id,
-            createdAt: '2024-01-18T15:30:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_012',
-            content: "I'm looking to move in next month. Is it still available?",
-            senderId: user.id,
-            receiverId: 'user_004',
-            createdAt: '2024-01-18T16:00:00Z',
-            isRead: true,
-          },
-          {
-            id: 'msg_013',
-            content: 'The studio apartment has been booked. Thank you!',
-            senderId: 'user_004',
-            receiverId: user.id,
-            createdAt: '2024-01-18T16:45:00Z',
-            isRead: true,
-          },
-        ],
-      },
-    ];
+    const body = await request.json();
+    const { participantId, initialMessage, listingId, listingTitle } = body;
 
-    const responseTime = Date.now() - startTime;
-    console.log(`✅ GET /api/messages/conversations completed in ${responseTime}ms`);
+    if (!participantId) {
+      return NextResponse.json(
+        { success: false, error: 'Participant ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Find or create conversation
+    const conversation = await (Conversation as any).findOrCreate(
+      user.id,
+      participantId,
+      listingId,
+      listingTitle
+    );
+
+    // If there's an initial message, create it
+    if (initialMessage && initialMessage.trim()) {
+      const message = new Message({
+        conversationId: conversation._id,
+        senderId: user.id,
+        receiverId: participantId,
+        content: initialMessage,
+        type: 'text',
+        isRead: false,
+      });
+
+      await message.save();
+
+      // Update conversation
+      conversation.lastMessage = message._id;
+      conversation.lastActivity = new Date();
+      await conversation.save();
+    }
+
+    // Populate conversation for response
+    await conversation.populate('participants', 'name avatar role email');
+
+    const otherParticipant = conversation.participants.find(
+      (p: any) => p._id.toString() !== user.id
+    );
+
+    logApiRequest('POST', '/api/messages/conversations', user.id, 201, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
-      data: mockConversations,
+      data: {
+        id: conversation._id,
+        participant: {
+          id: otherParticipant._id,
+          name: otherParticipant.name,
+          avatar: otherParticipant.avatar || '/images/default-avatar.png',
+          role: otherParticipant.role,
+          email: otherParticipant.email,
+        },
+        messageCount: conversation.messageCount,
+        createdAt: conversation.createdAt.toISOString(),
+        lastActivity: conversation.lastActivity.toISOString(),
+      },
     });
   } catch (error) {
-    logError('Error in GET /api/messages/conversations:', error);
+    logError('Error in POST /api/messages/conversations:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch conversations' },
+      { success: false, error: 'Failed to create conversation' },
       { status: 500 }
     );
   }

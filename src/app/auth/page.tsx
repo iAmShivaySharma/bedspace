@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import RegisterForm from '@/components/forms/RegisterForm';
 import LoginForm from '@/components/forms/LoginForm';
 import OTPVerificationForm from '@/components/forms/OTPVerificationForm';
@@ -15,6 +15,8 @@ export default function AuthPage() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
 
   const handleRegisterSuccess = (data: any) => {
     setUserEmail(data.email);
@@ -27,8 +29,13 @@ export default function AuthPage() {
     setMessage('Login successful! Redirecting...');
     setError('');
 
-    // Redirect based on user role and verification status
+    // Redirect based on redirect URL or user role
     setTimeout(() => {
+      if (redirectUrl) {
+        router.push(decodeURIComponent(redirectUrl));
+        return;
+      }
+
       if (data.user.role === 'admin') {
         router.push('/admin');
       } else if (data.user.role === 'provider') {
@@ -47,8 +54,13 @@ export default function AuthPage() {
     setMessage('Email verified successfully! Redirecting...');
     setError('');
 
-    // Redirect based on user role
+    // Redirect based on redirect URL or user role
     setTimeout(() => {
+      if (redirectUrl) {
+        router.push(decodeURIComponent(redirectUrl));
+        return;
+      }
+
       if (data.user.role === 'provider') {
         router.push('/provider/verification');
       } else {

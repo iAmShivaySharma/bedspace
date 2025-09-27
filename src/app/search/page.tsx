@@ -7,6 +7,7 @@ import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import HomeHeader from '@/components/layout/HomeHeader';
+import { useCreateConversationMutation } from '@/lib/api/commonApi';
 import {
   Search,
   MapPin,
@@ -20,6 +21,7 @@ import {
   Car,
   Utensils,
   Dumbbell,
+  MessageCircle,
 } from 'lucide-react';
 
 interface Listing {
@@ -33,6 +35,7 @@ interface Listing {
   amenities: string[];
   images: string[];
   provider: {
+    id: string;
     name: string;
     rating: number;
     verified: boolean;
@@ -44,7 +47,7 @@ interface Listing {
 }
 
 function SearchPageContent() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +59,8 @@ function SearchPageContent() {
 
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const [createConversation] = useCreateConversationMutation();
 
   useEffect(() => {
     // Check authentication
@@ -174,6 +179,33 @@ function SearchPageContent() {
     }
   };
 
+  const handleContactProvider = async (listing: Listing) => {
+    if (!user) {
+      router.push('/auth/login?redirect=' + encodeURIComponent('/search'));
+      return;
+    }
+
+    if (user.role !== 'seeker') {
+      alert('Only seekers can contact providers');
+      return;
+    }
+
+    try {
+      const result = await createConversation({
+        participantId: listing.provider.id,
+        initialMessage: `Hi! I'm interested in your listing: ${listing.title}`,
+        listingId: listing.id,
+        listingTitle: listing.title,
+      }).unwrap();
+
+      // Navigate to messages page with the new conversation
+      router.push(`/seeker/messages?conversation=${result.data?.id}`);
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      alert('Failed to start conversation. Please try again.');
+    }
+  };
+
   return (
     <div className='min-h-screen bg-gray-50'>
       <HomeHeader user={user} />
@@ -275,7 +307,7 @@ function SearchPageContent() {
               viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'
             }`}
           >
-            {listings.map(listing => (
+            {listings?.map(listing => (
               <Card
                 key={listing.id}
                 className='overflow-hidden hover:shadow-lg transition-shadow cursor-pointer'
@@ -340,7 +372,19 @@ function SearchPageContent() {
                       </span>
                       <span className='text-gray-600'>/month</span>
                     </div>
-                    <Button size='sm'>View Details</Button>
+                    <div className='flex gap-2'>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() => handleContactProvider(listing)}
+                      >
+                        <MessageCircle className='w-4 h-4 mr-1' />
+                        Contact
+                      </Button>
+                      <Button size='sm' onClick={() => router.push(`/listing/${listing.id}`)}>
+                        View Details
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

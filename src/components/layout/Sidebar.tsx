@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
 import {
   Home,
   Search,
@@ -50,6 +51,7 @@ interface NavItem {
 export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { unreadCount } = useUnreadMessages();
 
   // Navigation items based on user role
   const getNavItems = (): NavItem[] => {
@@ -67,7 +69,12 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
         { name: 'Search', href: '/search', icon: Search },
         { name: 'Favorites', href: '/seeker/favorites', icon: Heart },
         { name: 'Bookings', href: '/seeker/bookings', icon: Calendar },
-        { name: 'Messages', href: '/messages', icon: MessageCircle, badge: 2 },
+        {
+          name: 'Messages',
+          href: '/seeker/messages',
+          icon: MessageCircle,
+          badge: unreadCount > 0 ? unreadCount : undefined,
+        },
         { name: 'Payments', href: '/payments', icon: CreditCard },
         { name: 'Profile', href: '/profile', icon: User },
       ];
@@ -95,7 +102,12 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
           icon: Calendar,
           requiresVerification: true,
         },
-        { name: 'Messages', href: '/messages', icon: MessageCircle, badge: 2 },
+        {
+          name: 'Messages',
+          href: '/provider/messages',
+          icon: MessageCircle,
+          badge: unreadCount > 0 ? unreadCount : undefined,
+        },
         {
           name: 'Analytics',
           href: '/provider/analytics',
@@ -119,6 +131,12 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
         { name: 'Users', href: '/admin/users', icon: Users },
         { name: 'Listings', href: '/admin/listings', icon: Building },
         { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
+        {
+          name: 'Messages',
+          href: '/admin/messages',
+          icon: MessageCircle,
+          badge: unreadCount > 0 ? unreadCount : undefined,
+        },
         { name: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
         { name: 'Reports', href: '/admin/reports', icon: FileText },
         { name: 'Settings', href: '/admin/settings', icon: Settings },

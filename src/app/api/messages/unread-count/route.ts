@@ -1,49 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticate } from '@/middleware/auth';
+import { verifyAuth, AuthenticatedUser } from '@/middleware/auth';
 import connectDB from '@/lib/mongodb';
+import { Message } from '@/models/Message';
+import { logApiRequest, logError } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
-  try {
-    const { user, error } = await authenticate(request);
+  const startTime = Date.now();
 
-    if (error || !user) {
-      return NextResponse.json(
-        { success: false, error: error || 'Authentication required' },
-        { status: 401 }
-      );
+  try {
+    // Verify authentication
+    const authResult = await verifyAuth(request);
+    if (!authResult.success) {
+      logApiRequest('GET', '/api/messages/unread-count', undefined, 401, Date.now() - startTime);
+      return NextResponse.json({ success: false, error: authResult.error }, { status: 401 });
     }
 
+    const user = authResult.user as AuthenticatedUser;
     await connectDB();
 
-    // For now, return mock data based on user activity
-    // In production, you would query a Messages collection
-    let count = 0;
+    // Count unread messages for the current user
+    const unreadCount = await Message.countDocuments({
+      receiverId: user.id,
+      isRead: false,
+    });
 
-    switch (user.role) {
-      case 'admin':
-        // Admin might have fewer direct messages
-        count = Math.floor(Math.random() * 2); // 0-1 messages
-        break;
-      case 'provider':
-        // Provider might have more inquiries from seekers
-        count = Math.floor(Math.random() * 6); // 0-5 messages
-        break;
-      case 'seeker':
-        // Seeker might have responses from providers
-        count = Math.floor(Math.random() * 4); // 0-3 messages
-        break;
-      default:
-        count = 0;
-    }
+    logApiRequest('GET', '/api/messages/unread-count', user.id, 200, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
-      data: { count },
+      data: { count: unreadCount },
     });
   } catch (error) {
-    console.error('Get unread messages count error:', error);
+    logError('Error in GET /api/messages/unread-count:', error);
+    logApiRequest('GET', '/api/messages/unread-count', undefined, 500, Date.now() - startTime);
     return NextResponse.json(
-      { success: false, error: 'Failed to get unread messages count' },
+      { success: false, error: 'Failed to get unread message count' },
       { status: 500 }
     );
   }

@@ -26,6 +26,8 @@ interface MessagePayload {
 interface CreateConversationPayload {
   participantId: string;
   initialMessage?: string;
+  listingId?: string;
+  listingTitle?: string;
 }
 
 interface LocationData {

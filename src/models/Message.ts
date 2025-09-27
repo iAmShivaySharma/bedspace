@@ -24,6 +24,8 @@ export interface IConversation extends Document {
   lastMessage?: mongoose.Types.ObjectId;
   lastMessageAt: Date;
   isActive: boolean;
+  listingId?: mongoose.Types.ObjectId; // Associated listing if chat is about a specific property
+  listingTitle?: string; // Cached listing title for quick reference
   createdAt: Date;
   updatedAt: Date;
 }
@@ -101,6 +103,15 @@ const ConversationSchema = new Schema<IConversation>(
       default: true,
       index: true,
     },
+    listingId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Listing',
+      index: true,
+    },
+    listingTitle: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,
@@ -152,20 +163,39 @@ MessageSchema.methods.softDelete = function () {
 // Static method to find or create conversation
 ConversationSchema.statics.findOrCreate = async function (
   participant1: string,
-  participant2: string
+  participant2: string,
+  listingId?: string,
+  listingTitle?: string
 ) {
   const participants = [participant1, participant2].sort(); // Sort to ensure consistent order
 
-  let conversation = await this.findOne({
+  // Search criteria - include listingId if provided for listing-specific conversations
+  const searchCriteria: any = {
     participants: { $all: participants, $size: 2 },
     isActive: true,
-  });
+  };
+
+  if (listingId) {
+    searchCriteria.listingId = listingId;
+  } else {
+    // For general conversations, ensure no listingId is set
+    searchCriteria.listingId = { $exists: false };
+  }
+
+  let conversation = await this.findOne(searchCriteria);
 
   if (!conversation) {
-    conversation = await this.create({
+    const conversationData: any = {
       participants,
       lastMessageAt: new Date(),
-    });
+    };
+
+    if (listingId) {
+      conversationData.listingId = listingId;
+      conversationData.listingTitle = listingTitle;
+    }
+
+    conversation = await this.create(conversationData);
   }
 
   return conversation;

@@ -21,10 +21,20 @@ interface Listing {
   _id: string;
   title: string;
   description: string;
-  price: number;
-  location: string;
-  status: 'active' | 'inactive' | 'pending';
+  rent: number;
+  price?: number; // For backwards compatibility
+  address: string;
+  city: string;
+  location?: string; // For backwards compatibility
+  isActive: boolean;
+  isApproved: boolean;
+  status?: 'active' | 'inactive' | 'pending'; // For backwards compatibility
+  roomType: string;
+  genderPreference: string;
+  facilities: string[];
+  images: Array<{ fileUrl: string; isPrimary: boolean }>;
   createdAt: string;
+  updatedAt: string;
 }
 
 export default function ProviderListingsPage() {
@@ -134,46 +144,123 @@ export default function ProviderListingsPage() {
           </Card>
         ) : (
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-            {listings.map(listing => (
+            {listings?.map(listing => (
               <Card key={listing._id} className='hover:shadow-md transition-shadow'>
                 <CardHeader>
                   <div className='flex items-start justify-between'>
                     <div className='flex-1'>
                       <CardTitle className='text-lg line-clamp-1'>{listing.title}</CardTitle>
                       <CardDescription className='text-sm text-gray-500'>
-                        {listing.location}
+                        {listing.location || `${listing.address}, ${listing.city}`}
                       </CardDescription>
                     </div>
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        listing.status === 'active'
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${(() => {
+                        const status =
+                          listing.status ||
+                          (!listing.isApproved
+                            ? 'pending'
+                            : !listing.isActive
+                              ? 'inactive'
+                              : 'active');
+                        return status === 'active'
                           ? 'bg-green-100 text-green-800'
-                          : listing.status === 'pending'
+                          : status === 'pending'
                             ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
-                      }`}
+                            : 'bg-gray-100 text-gray-800';
+                      })()}`}
                     >
-                      {listing.status.charAt(0).toUpperCase() + listing.status.slice(1)}
+                      {(() => {
+                        const status =
+                          listing.status ||
+                          (!listing.isApproved
+                            ? 'pending'
+                            : !listing.isActive
+                              ? 'inactive'
+                              : 'active');
+                        return status.charAt(0).toUpperCase() + status.slice(1);
+                      })()}
                     </span>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className='text-sm text-gray-600 line-clamp-2 mb-4'>{listing.description}</p>
+
+                  {/* Room type and gender preference */}
+                  <div className='flex gap-2 mb-3'>
+                    <span className='px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs'>
+                      {listing.roomType === 'single'
+                        ? 'Private'
+                        : listing.roomType === 'shared'
+                          ? 'Shared'
+                          : listing.roomType}
+                    </span>
+                    <span className='px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs'>
+                      {listing.genderPreference === 'any'
+                        ? 'Any Gender'
+                        : listing.genderPreference === 'male'
+                          ? 'Male Only'
+                          : listing.genderPreference === 'female'
+                            ? 'Female Only'
+                            : listing.genderPreference}
+                    </span>
+                  </div>
+
+                  {/* Facilities */}
+                  {listing.facilities && listing.facilities.length > 0 && (
+                    <div className='flex flex-wrap gap-1 mb-3'>
+                      {listing.facilities.slice(0, 3).map(facility => (
+                        <span
+                          key={facility}
+                          className='px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs'
+                        >
+                          {facility}
+                        </span>
+                      ))}
+                      {listing.facilities.length > 3 && (
+                        <span className='px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs'>
+                          +{listing.facilities.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className='flex items-center justify-between'>
                     <div>
                       <p className='text-lg font-bold text-blue-600'>
-                        ₹{listing.price.toLocaleString()}
+                        ₹{(listing?.rent || listing?.price)?.toLocaleString()}
                       </p>
                       <p className='text-xs text-gray-500'>per month</p>
                     </div>
                     <div className='flex items-center space-x-1'>
-                      <Button variant='ghost' size='sm'>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => router.push(`/listing/${listing._id}`)}
+                        title='View listing details'
+                      >
                         <Eye className='w-4 h-4' />
                       </Button>
-                      <Button variant='ghost' size='sm'>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        onClick={() => router.push(`/provider/listings/${listing._id}/edit`)}
+                        title='Edit listing'
+                      >
                         <Edit className='w-4 h-4' />
                       </Button>
-                      <Button variant='ghost' size='sm' className='text-red-600 hover:text-red-700'>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        className='text-red-600 hover:text-red-700'
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this listing?')) {
+                            // TODO: Implement delete functionality
+                            console.log('Delete listing:', listing._id);
+                          }
+                        }}
+                        title='Delete listing'
+                      >
                         <Trash2 className='w-4 h-4' />
                       </Button>
                     </div>
