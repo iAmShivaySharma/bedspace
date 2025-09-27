@@ -66,7 +66,7 @@ export async function GET(
     });
 
     const transformedMessages = messages.map(message => ({
-      id: message._id,
+      id: message._id.toString(),
       conversationId: message.conversationId,
       senderId: message.senderId._id.toString(),
       receiverId: message.receiverId.toString(),
@@ -75,7 +75,7 @@ export async function GET(
       isRead: message.isRead,
       createdAt: message.createdAt.toISOString(),
       sender: {
-        id: message.senderId._id,
+        id: message.senderId._id.toString(),
         name: message.senderId.name,
         avatar: message.senderId.avatar,
       },

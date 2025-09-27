@@ -18,6 +18,7 @@ import {
   CreditCard,
   HelpCircle,
   ChevronLeft,
+  Eye,
   ChevronRight,
   Users,
   FileText,
@@ -103,6 +104,12 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
           requiresVerification: true,
         },
         {
+          name: 'Visits',
+          href: '/provider/visits',
+          icon: Eye,
+          requiresVerification: true,
+        },
+        {
           name: 'Messages',
           href: '/provider/messages',
           icon: MessageCircle,
@@ -131,6 +138,7 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
         { name: 'Users', href: '/admin/users', icon: Users },
         { name: 'Listings', href: '/admin/listings', icon: Building },
         { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
+        { name: 'Visits', href: '/admin/visits', icon: Eye },
         {
           name: 'Messages',
           href: '/admin/messages',

@@ -29,6 +29,17 @@ interface BookingRequestPayload {
   requestedDate: string;
 }
 
+interface CreatePaymentIntentPayload {
+  listingId: string;
+  checkInDate: string;
+  duration: number;
+  notes?: string;
+}
+
+interface ConfirmPaymentPayload {
+  paymentIntentId: string;
+}
+
 interface FavoritePayload {
   listingId: string;
 }
@@ -177,6 +188,23 @@ export const seekerApi = bedspaceApi.injectEndpoints({
       query: listingId => `/listings/${listingId}`,
       providesTags: (result, error, id) => [{ type: 'Listing', id }],
     }),
+
+    createPaymentIntent: builder.mutation<ApiResponse<any>, CreatePaymentIntentPayload>({
+      query: paymentData => ({
+        url: '/payments/create-intent',
+        method: 'POST',
+        body: paymentData,
+      }),
+    }),
+
+    confirmPayment: builder.mutation<ApiResponse<any>, ConfirmPaymentPayload>({
+      query: data => ({
+        url: '/payments/confirm',
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: [{ type: 'SeekerBooking', id: 'LIST' }, 'SeekerStats'],
+    }),
   }),
 });
 
@@ -187,8 +215,8 @@ export const {
   useGetSeekerActivitiesQuery,
   useCreateBookingRequestMutation,
   useCancelBookingRequestMutation,
-  useAddToFavoritesMutation,
-  useRemoveFromFavoritesMutation,
   useSearchListingsQuery,
   useGetListingByIdQuery,
+  useCreatePaymentIntentMutation,
+  useConfirmPaymentMutation,
 } = seekerApi;

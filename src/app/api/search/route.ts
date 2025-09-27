@@ -84,8 +84,7 @@ export async function GET(request: NextRequest) {
 
     // Transform listings to match frontend format
     const transformedListings = listings.map(listing => ({
-      id: listing._id,
-      _id: listing._id,
+      id: listing._id.toString(),
       title: listing.title,
       description: listing.description,
       location: `${listing.address}, ${listing.city}`,
@@ -100,7 +99,7 @@ export async function GET(request: NextRequest) {
       amenities: listing.facilities || [],
       images: listing.images?.map((img: any) => img.fileUrl) || ['/api/placeholder/400/300'],
       provider: {
-        id: listing.providerId._id,
+        id: listing.providerId._id.toString(),
         name: listing.providerId.name,
         rating: (4.0 + Math.random()).toFixed(1), // Placeholder rating
         verified: listing.providerId.verificationStatus === 'approved',

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     // Transform to match expected format
     const transformedNotifications = notifications.map((notification: any) => ({
-      id: notification._id,
+      id: notification._id.toString(),
       title: notification.title,
       message: notification.message,
       type: notification.type,
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        id: notification._id,
+        id: notification._id.toString(),
         title: notification.title,
         message: notification.message,
         type: notification.type,

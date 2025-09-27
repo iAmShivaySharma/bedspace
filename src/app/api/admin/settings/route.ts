@@ -38,6 +38,14 @@ const DEFAULT_SETTINGS = {
     maxLoginAttempts: 5,
     twoFactorRequired: false,
   },
+  localization: {
+    defaultCurrency: 'INR',
+    currencySymbol: '₹',
+    defaultTimezone: 'Asia/Kolkata',
+    dateFormat: 'DD/MM/YYYY',
+    timeFormat: '12',
+    supportedCurrencies: ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'JPY'],
+  },
 };
 
 export async function GET(request: NextRequest) {
@@ -91,7 +99,14 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
 
     // Validate settings structure
-    const requiredSections = ['general', 'booking', 'verification', 'notifications', 'security'];
+    const requiredSections = [
+      'general',
+      'booking',
+      'verification',
+      'notifications',
+      'security',
+      'localization',
+    ];
     for (const section of requiredSections) {
       if (!body[section]) {
         return NextResponse.json(
@@ -119,6 +134,28 @@ export async function PUT(request: NextRequest) {
     if (body.booking.maxBookingDuration < body.booking.minBookingDuration) {
       return NextResponse.json(
         { success: false, error: 'Maximum booking duration must be greater than minimum' },
+        { status: 400 }
+      );
+    }
+
+    // Validate localization settings
+    if (!body.localization.defaultCurrency) {
+      return NextResponse.json(
+        { success: false, error: 'Default currency is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.localization.currencySymbol) {
+      return NextResponse.json(
+        { success: false, error: 'Currency symbol is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.localization.defaultTimezone) {
+      return NextResponse.json(
+        { success: false, error: 'Default timezone is required' },
         { status: 400 }
       );
     }

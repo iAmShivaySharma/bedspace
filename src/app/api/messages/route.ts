@@ -65,16 +65,16 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         data: {
-          id: message._id,
+          id: message._id.toString(),
           conversationId: message.conversationId,
-          senderId: message.senderId._id,
+          senderId: message.senderId._id.toString(),
           receiverId: message.receiverId,
           content: message.content,
           messageType: message.messageType,
           isRead: message.isRead,
           createdAt: message.createdAt.toISOString(),
           sender: {
-            id: message.senderId._id,
+            id: message.senderId._id.toString(),
             name: message.senderId.name,
             avatar: message.senderId.avatar,
           },

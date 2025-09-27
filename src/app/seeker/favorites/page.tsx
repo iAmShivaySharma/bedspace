@@ -5,7 +5,8 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Heart, MapPin, Star, Wifi, Car, Coffee, Trash2 } from 'lucide-react';
-import { useGetSeekerFavoritesQuery, useRemoveFromFavoritesMutation } from '@/lib/api/seekerApi';
+import { useGetSeekerFavoritesQuery } from '@/lib/api/seekerApi';
+import { useRemoveFromFavoritesMutation } from '@/lib/api/commonApi';
 import { toast } from 'sonner';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 

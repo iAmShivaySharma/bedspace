@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useCurrency } from '@/contexts/LocalizationContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import HomeHeader from '@/components/layout/HomeHeader';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import FavoriteButton from '@/components/ui/FavoriteButton';
+import ScheduleVisitModal from '@/components/chat/ScheduleVisitModal';
+import BookingModal from '@/components/booking/BookingModal';
 import { useCreateConversationMutation } from '@/lib/api/commonApi';
 import {
   MapPin,
@@ -21,6 +25,7 @@ import {
   Users,
   Calendar,
   IndianRupee,
+  Home,
 } from 'lucide-react';
 
 interface Listing {
@@ -62,12 +67,15 @@ interface User {
 export default function ListingDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { formatCurrency } = useCurrency();
   const listingId = params?.id as string;
 
   const [user, setUser] = useState<User | null>(null);
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   const [createConversation] = useCreateConversationMutation();
 
@@ -231,9 +239,15 @@ export default function ListingDetailsPage() {
                     </span>
                   </div>
                 </div>
-                <Button variant='ghost' size='sm'>
-                  <Heart className='w-5 h-5' />
-                </Button>
+                {(!user || user.role === 'seeker') && (
+                  <FavoriteButton
+                    listingId={listing._id}
+                    isAuthenticated={!!user}
+                    onAuthRequired={() =>
+                      router.push('/auth?redirect=' + encodeURIComponent(`/listing/${listingId}`))
+                    }
+                  />
+                )}
               </div>
 
               <div className='flex gap-3 mb-6'>
@@ -293,25 +307,35 @@ export default function ListingDetailsPage() {
                 <div className='flex items-center mb-2'>
                   <IndianRupee className='w-6 h-6 text-blue-600 mr-1' />
                   <span className='text-3xl font-bold text-gray-900'>
-                    {listing.rent.toLocaleString()}
+                    {formatCurrency(listing.rent)}
                   </span>
                   <span className='text-gray-600 ml-2'>per month</span>
                 </div>
                 <p className='text-sm text-gray-600'>
-                  Security Deposit: ₹{listing.securityDeposit.toLocaleString()}
+                  Security Deposit: {formatCurrency(listing.securityDeposit)}
                 </p>
               </div>
 
               {user?.role === 'seeker' && (
                 <div className='space-y-3'>
-                  <Button onClick={handleContactProvider} className='w-full' size='lg'>
-                    <MessageCircle className='w-5 h-5 mr-2' />
-                    Contact Provider
+                  <Button
+                    onClick={() => setShowBookingModal(true)}
+                    className='w-full bg-green-600 hover:bg-green-700'
+                    size='lg'
+                  >
+                    <Home className='w-5 h-5 mr-2' />
+                    Book Now
                   </Button>
-                  <Button variant='outline' className='w-full' size='lg'>
-                    <Calendar className='w-5 h-5 mr-2' />
-                    Schedule Visit
-                  </Button>
+                  <div className='grid grid-cols-2 gap-3'>
+                    <Button variant='outline' onClick={() => setShowScheduleModal(true)} size='lg'>
+                      <Calendar className='w-5 h-5 mr-2' />
+                      Schedule Visit
+                    </Button>
+                    <Button onClick={handleContactProvider} variant='outline' size='lg'>
+                      <MessageCircle className='w-5 h-5 mr-2' />
+                      Message
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -362,6 +386,34 @@ export default function ListingDetailsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Schedule Visit Modal */}
+      {user?.role === 'seeker' && listing && (
+        <ScheduleVisitModal
+          isOpen={showScheduleModal}
+          onClose={() => setShowScheduleModal(false)}
+          listingId={listing._id}
+          providerId={listing.provider._id}
+          listingTitle={listing.title}
+        />
+      )}
+
+      {/* Booking Modal */}
+      {user?.role === 'seeker' && listing && (
+        <BookingModal
+          isOpen={showBookingModal}
+          onClose={() => setShowBookingModal(false)}
+          listing={{
+            id: listing._id,
+            title: listing.title,
+            rent: listing.rent,
+            securityDeposit: listing.securityDeposit,
+            address: listing.address,
+            city: listing.city,
+          }}
+          providerId={listing.provider._id}
+        />
+      )}
     </div>
   );
 }

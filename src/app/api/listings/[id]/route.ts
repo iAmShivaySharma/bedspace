@@ -30,7 +30,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     }
 
     const transformedListing = {
-      _id: listing._id,
+      id: listing._id.toString(),
+      _id: listing._id.toString(),
       title: listing.title,
       description: listing.description,
       rent: listing.rent,
@@ -46,9 +47,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       availableFrom: listing.availableFrom,
       isActive: listing.isActive,
       isApproved: listing.isApproved,
-      providerId: listing.providerId._id,
+      providerId: listing.providerId._id.toString(),
       provider: {
-        _id: listing.providerId._id,
+        id: listing.providerId._id.toString(),
+        _id: listing.providerId._id.toString(),
         name: listing.providerId.name,
         avatar: listing.providerId.avatar,
         rating: listing.providerId.rating || 0,

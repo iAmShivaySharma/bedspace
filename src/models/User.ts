@@ -18,6 +18,7 @@ export interface IUser extends Document {
   resetPasswordToken?: string;
   resetPasswordExpiry?: Date;
   lastLogin?: Date;
+  favorites?: mongoose.Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -133,6 +134,12 @@ const UserSchema = new Schema<IUser>(
     resetPasswordToken: String,
     resetPasswordExpiry: Date,
     lastLogin: Date,
+    favorites: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'Listing',
+      },
+    ],
   },
   {
     timestamps: true,

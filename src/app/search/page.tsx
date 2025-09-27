@@ -2,11 +2,13 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useCurrency } from '@/contexts/LocalizationContext';
 import { Button } from '@/components/ui/button';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import HomeHeader from '@/components/layout/HomeHeader';
+import FavoriteButton from '@/components/ui/FavoriteButton';
 import { useCreateConversationMutation } from '@/lib/api/commonApi';
 import {
   Search,
@@ -26,6 +28,7 @@ import {
 
 interface Listing {
   id: string;
+  _id?: string;
   title: string;
   description: string;
   location: string;
@@ -49,6 +52,7 @@ interface Listing {
 function SearchPageContent() {
   const [user, setUser] = useState<any>(null);
   const [listings, setListings] = useState<Listing[]>([]);
+  const { formatCurrency } = useCurrency();
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
@@ -194,7 +198,7 @@ function SearchPageContent() {
       const result = await createConversation({
         participantId: listing.provider.id,
         initialMessage: `Hi! I'm interested in your listing: ${listing.title}`,
-        listingId: listing.id,
+        listingId: listing._id || listing.id,
         listingTitle: listing.title,
       }).unwrap();
 
@@ -321,13 +325,17 @@ function SearchPageContent() {
                       <p className='text-sm text-gray-600'>Verified Listing</p>
                     </div>
                   </div>
-                  <Button
-                    variant='ghost'
-                    size='sm'
-                    className='absolute top-3 right-3 bg-white/80 hover:bg-white p-2 rounded-full'
-                  >
-                    <Heart className='w-4 h-4' />
-                  </Button>
+                  {(!user || user.role === 'seeker') && (
+                    <div className='absolute top-3 right-3'>
+                      <FavoriteButton
+                        listingId={listing._id || listing.id}
+                        isAuthenticated={!!user}
+                        onAuthRequired={() =>
+                          router.push('/auth?redirect=' + encodeURIComponent('/search'))
+                        }
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <CardContent className='p-6'>
@@ -368,7 +376,7 @@ function SearchPageContent() {
                   <div className='flex items-center justify-between'>
                     <div>
                       <span className='text-2xl font-bold text-gray-900'>
-                        ₹{listing.price.toLocaleString()}
+                        {formatCurrency(listing.price)}
                       </span>
                       <span className='text-gray-600'>/month</span>
                     </div>

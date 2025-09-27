@@ -20,18 +20,53 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1') || 1;
-    const limit = parseInt(searchParams.get('limit') || '20') || 20;
+    const limitParam = searchParams.get('limit');
+    const limit = limitParam ? parseInt(limitParam) || 20 : 20;
 
-    // Get user conversations with unread counts
-    const conversations = await (Conversation as any).getUserConversations(user.id, page, limit);
+    console.log('Pagination params:', { page, limit, limitParam });
+
+    // Get user conversations directly using find instead of aggregation
+    console.log('Fetching conversations for user:', user.id);
+
+    const conversations = await Conversation.find({
+      participants: user.id,
+      isActive: true,
+    })
+      .populate('participants', 'name avatar role email')
+      .populate('lastMessage')
+      .sort({ lastMessageAt: -1, updatedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    console.log('Found conversations:', conversations.length);
+
+    if (!conversations || conversations.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+        },
+      });
+    }
 
     // Transform conversations to match expected format
     const transformedConversations = await Promise.all(
       conversations.map(async (conversation: any) => {
+        console.log('Processing conversation:', conversation._id);
+
         // Get the other participant (not the current user)
-        const otherParticipant = conversation.participants.find(
+        const otherParticipant = conversation.participants?.find(
           (p: any) => p._id.toString() !== user.id
         );
+
+        if (!otherParticipant) {
+          console.log('No other participant found, skipping conversation:', conversation._id);
+          return null;
+        }
 
         // Get unread count for this conversation
         const unreadCount = await Message.countDocuments({
@@ -66,9 +101,9 @@ export async function GET(request: NextRequest) {
               }
             : null,
           unreadCount,
-          messageCount: conversation.messageCount,
+          messageCount: conversation.messageCount || 0,
           createdAt: conversation.createdAt.toISOString(),
-          lastActivity: conversation.lastActivity.toISOString(),
+          lastActivity: (conversation.lastMessageAt || conversation.updatedAt).toISOString(),
           listing: conversation.listingId
             ? {
                 id: conversation.listingId,
@@ -93,22 +128,34 @@ export async function GET(request: NextRequest) {
       })
     );
 
+    // Filter out null results from failed processing
+    const validConversations = transformedConversations.filter(conv => conv !== null);
+
     logApiRequest('GET', '/api/messages/conversations', user.id, 200, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
-      data: transformedConversations,
+      data: validConversations,
       pagination: {
         page,
         limit,
-        total: transformedConversations.length,
+        total: validConversations.length,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     logError('Error in GET /api/messages/conversations:', error);
     logApiRequest('GET', '/api/messages/conversations', undefined, 500, Date.now() - startTime);
+    console.error('Detailed conversations error:', {
+      error: error?.message || 'Unknown error',
+      stack: error?.stack,
+      url: request.url,
+    });
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch conversations' },
+      {
+        success: false,
+        error: 'Failed to fetch conversations',
+        details: error?.message || 'Unknown error',
+      },
       { status: 500 }
     );
   }

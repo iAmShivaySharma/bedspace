@@ -8,6 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import {
@@ -22,6 +29,7 @@ import {
   DollarSign,
   Users,
   AlertTriangle,
+  Clock,
 } from 'lucide-react';
 
 interface PlatformSettings {
@@ -55,6 +63,14 @@ interface PlatformSettings {
     sessionTimeout: number;
     maxLoginAttempts: number;
     twoFactorRequired: boolean;
+  };
+  localization: {
+    defaultCurrency: string;
+    currencySymbol: string;
+    defaultTimezone: string;
+    dateFormat: string;
+    timeFormat: string;
+    supportedCurrencies: string[];
   };
 }
 
@@ -129,6 +145,7 @@ export default function SettingsPage() {
     { id: 'verification', label: 'Verification', icon: Shield },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
+    { id: 'localization', label: 'Localization', icon: Globe },
   ];
 
   if (loading) {
@@ -526,6 +543,144 @@ export default function SettingsPage() {
                         updateSetting('security', 'twoFactorRequired', checked)
                       }
                     />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {activeTab === 'localization' && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2'>
+                    <Globe className='h-5 w-5' />
+                    Localization Settings
+                  </CardTitle>
+                  <CardDescription>
+                    Configure currency, timezone, and regional settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className='space-y-6'>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='defaultCurrency'>Default Currency</Label>
+                      <Select
+                        value={settings.localization.defaultCurrency}
+                        onValueChange={(value: string) =>
+                          updateSetting('localization', 'defaultCurrency', value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select currency' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='INR'>Indian Rupee (INR)</SelectItem>
+                          <SelectItem value='USD'>US Dollar (USD)</SelectItem>
+                          <SelectItem value='EUR'>Euro (EUR)</SelectItem>
+                          <SelectItem value='GBP'>British Pound (GBP)</SelectItem>
+                          <SelectItem value='AUD'>Australian Dollar (AUD)</SelectItem>
+                          <SelectItem value='CAD'>Canadian Dollar (CAD)</SelectItem>
+                          <SelectItem value='SGD'>Singapore Dollar (SGD)</SelectItem>
+                          <SelectItem value='JPY'>Japanese Yen (JPY)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label htmlFor='currencySymbol'>Currency Symbol</Label>
+                      <Input
+                        id='currencySymbol'
+                        value={settings.localization.currencySymbol}
+                        onChange={e =>
+                          updateSetting('localization', 'currencySymbol', e.target.value)
+                        }
+                        placeholder='₹'
+                      />
+                    </div>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label htmlFor='defaultTimezone'>Default Timezone</Label>
+                    <Select
+                      value={settings.localization.defaultTimezone}
+                      onValueChange={(value: string) =>
+                        updateSetting('localization', 'defaultTimezone', value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder='Select timezone' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='Asia/Kolkata'>Asia/Kolkata (IST)</SelectItem>
+                        <SelectItem value='America/New_York'>America/New_York (EST/EDT)</SelectItem>
+                        <SelectItem value='America/Los_Angeles'>
+                          America/Los_Angeles (PST/PDT)
+                        </SelectItem>
+                        <SelectItem value='Europe/London'>Europe/London (GMT/BST)</SelectItem>
+                        <SelectItem value='Europe/Paris'>Europe/Paris (CET/CEST)</SelectItem>
+                        <SelectItem value='Asia/Tokyo'>Asia/Tokyo (JST)</SelectItem>
+                        <SelectItem value='Australia/Sydney'>
+                          Australia/Sydney (AEST/AEDT)
+                        </SelectItem>
+                        <SelectItem value='Asia/Singapore'>Asia/Singapore (SGT)</SelectItem>
+                        <SelectItem value='Asia/Dubai'>Asia/Dubai (GST)</SelectItem>
+                        <SelectItem value='UTC'>UTC (Coordinated Universal Time)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                    <div className='space-y-2'>
+                      <Label htmlFor='dateFormat'>Date Format</Label>
+                      <Select
+                        value={settings.localization.dateFormat}
+                        onValueChange={(value: string) =>
+                          updateSetting('localization', 'dateFormat', value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select date format' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='DD/MM/YYYY'>DD/MM/YYYY (31/12/2023)</SelectItem>
+                          <SelectItem value='MM/DD/YYYY'>MM/DD/YYYY (12/31/2023)</SelectItem>
+                          <SelectItem value='YYYY-MM-DD'>YYYY-MM-DD (2023-12-31)</SelectItem>
+                          <SelectItem value='DD-MM-YYYY'>DD-MM-YYYY (31-12-2023)</SelectItem>
+                          <SelectItem value='DD.MM.YYYY'>DD.MM.YYYY (31.12.2023)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className='space-y-2'>
+                      <Label htmlFor='timeFormat'>Time Format</Label>
+                      <Select
+                        value={settings.localization.timeFormat}
+                        onValueChange={(value: string) =>
+                          updateSetting('localization', 'timeFormat', value)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder='Select time format' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='12'>12-hour (2:30 PM)</SelectItem>
+                          <SelectItem value='24'>24-hour (14:30)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <Label>Supported Currencies</Label>
+                    <div className='flex flex-wrap gap-2'>
+                      {settings.localization.supportedCurrencies.map((currency, index) => (
+                        <Badge key={index} variant='outline'>
+                          {currency}
+                        </Badge>
+                      ))}
+                    </div>
+                    <p className='text-sm text-gray-500'>
+                      Currencies available for users and providers to select from
+                    </p>
                   </div>
                 </CardContent>
               </Card>

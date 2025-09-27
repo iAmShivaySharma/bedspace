@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useCurrency } from '@/contexts/LocalizationContext';
 import { Button } from '@/components/ui/button';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import HomeHeader from '@/components/layout/HomeHeader';
+import FavoriteButton from '@/components/ui/FavoriteButton';
 import {
   Search,
   MapPin,
@@ -25,9 +27,17 @@ import {
   Building,
 } from 'lucide-react';
 
+interface User {
+  id: string;
+  role: 'seeker' | 'provider' | 'admin';
+  name: string;
+  email: string;
+}
+
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
+  const { formatCurrency } = useCurrency();
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
@@ -336,16 +346,15 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                    <div className='absolute top-3 right-3'>
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        className='bg-white/80 hover:bg-white p-2 rounded-full'
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <Heart className='w-4 h-4' />
-                      </Button>
-                    </div>
+                    {(!user || user.role === 'seeker') && (
+                      <div className='absolute top-3 right-3'>
+                        <FavoriteButton
+                          listingId={listing._id || listing.id}
+                          isAuthenticated={!!user}
+                          onAuthRequired={() => router.push('/auth')}
+                        />
+                      </div>
+                    )}
                     <div className='absolute bottom-3 left-3'>
                       <span className='bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium'>
                         Available Now
@@ -395,7 +404,7 @@ export default function Home() {
                     <div className='flex items-center justify-between'>
                       <div>
                         <span className='text-2xl font-bold text-gray-900'>
-                          ₹{listing.price?.toLocaleString()}
+                          {formatCurrency(listing.price || 0)}
                         </span>
                         <span className='text-gray-600'>/month</span>
                       </div>

@@ -234,6 +234,7 @@ ConversationSchema.statics.getUserConversations = function (
     },
     {
       $addFields: {
+        messageCount: { $size: '$messages' },
         unreadCount: {
           $size: {
             $filter: {
@@ -248,17 +249,6 @@ ConversationSchema.statics.getUserConversations = function (
             },
           },
         },
-        otherParticipant: {
-          $arrayElemAt: [
-            {
-              $filter: {
-                input: '$participantDetails',
-                cond: { $ne: ['$$this._id', new mongoose.Types.ObjectId(userId)] },
-              },
-            },
-            0,
-          ],
-        },
       },
     },
     {
@@ -271,27 +261,25 @@ ConversationSchema.statics.getUserConversations = function (
     },
     {
       $addFields: {
-        lastMessageDetails: { $arrayElemAt: ['$lastMessageDetails', 0] },
+        lastMessage: { $arrayElemAt: ['$lastMessageDetails', 0] },
+        lastActivity: { $ifNull: ['$lastMessageAt', '$updatedAt'] },
       },
     },
     {
       $project: {
         _id: 1,
-        participants: 1,
-        lastMessageAt: 1,
+        participants: '$participantDetails',
+        lastMessage: 1,
+        lastActivity: 1,
+        messageCount: 1,
         unreadCount: 1,
-        otherParticipant: {
-          _id: 1,
-          name: 1,
-          avatar: 1,
-          role: 1,
-        },
-        lastMessage: '$lastMessageDetails',
+        listingId: 1,
+        listingTitle: 1,
         createdAt: 1,
         updatedAt: 1,
       },
     },
-    { $sort: { lastMessageAt: -1 } },
+    { $sort: { lastActivity: -1 } },
     { $skip: skip },
     { $limit: limit },
   ]);

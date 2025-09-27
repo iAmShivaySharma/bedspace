@@ -89,9 +89,12 @@ export const commonApi = bedspaceApi.injectEndpoints({
       query: (params = {}) => {
         const searchParams = new URLSearchParams();
         Object.entries(params).forEach(([key, value]) => {
-          if (value !== undefined) searchParams.append(key, value.toString());
+          if (value !== undefined && value !== null && String(value) !== '') {
+            searchParams.append(key, value.toString());
+          }
         });
-        return `/messages/conversations?${searchParams.toString()}`;
+        const queryString = searchParams.toString();
+        return `/messages/conversations${queryString ? `?${queryString}` : ''}`;
       },
       providesTags: result =>
         result?.data
@@ -216,6 +219,95 @@ export const commonApi = bedspaceApi.injectEndpoints({
         body: data,
       }),
     }),
+
+    getFavorites: builder.query<PaginatedResponse<any>, { page?: number; limit?: number }>({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined) searchParams.append(key, value.toString());
+        });
+        return `/favorites?${searchParams.toString()}`;
+      },
+      providesTags: result =>
+        result?.data
+          ? [
+              ...result.data.map(({ _id }) => ({ type: 'Favorite' as const, id: _id })),
+              { type: 'Favorite', id: 'LIST' },
+            ]
+          : [{ type: 'Favorite', id: 'LIST' }],
+    }),
+
+    addToFavorites: builder.mutation<ApiResponse<{ isFavorite: boolean }>, { listingId: string }>({
+      query: data => ({
+        url: '/favorites',
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: (result, error, { listingId }) => [
+        { type: 'Favorite', id: 'LIST' },
+        { type: 'Favorite', id: listingId },
+      ],
+    }),
+
+    removeFromFavorites: builder.mutation<ApiResponse<{ isFavorite: boolean }>, string>({
+      query: listingId => ({
+        url: `/favorites?listingId=${listingId}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: (result, error, listingId) => [
+        { type: 'Favorite', id: 'LIST' },
+        { type: 'Favorite', id: listingId },
+      ],
+    }),
+
+    checkFavoriteStatus: builder.query<ApiResponse<{ isFavorite: boolean }>, string>({
+      query: listingId => `/favorites/check?listingId=${listingId}`,
+      providesTags: (result, error, listingId) => [{ type: 'Favorite', id: listingId }],
+      // Force refetch on mount to ensure fresh data
+      keepUnusedDataFor: 0,
+    }),
+
+    getVisits: builder.query<
+      PaginatedResponse<any>,
+      { page?: number; limit?: number; status?: string }
+    >({
+      query: (params = {}) => {
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined) searchParams.append(key, value.toString());
+        });
+        return `/visits?${searchParams.toString()}`;
+      },
+      providesTags: result =>
+        result?.data
+          ? [
+              ...result.data.map(({ id }) => ({ type: 'Visit' as const, id })),
+              { type: 'Visit', id: 'LIST' },
+            ]
+          : [{ type: 'Visit', id: 'LIST' }],
+    }),
+
+    scheduleVisit: builder.mutation<
+      ApiResponse<any>,
+      { listingId: string; scheduledDate: string; timeSlot: string; notes?: string }
+    >({
+      query: data => ({
+        url: '/visits',
+        method: 'POST',
+        body: data,
+      }),
+      invalidatesTags: [{ type: 'Visit', id: 'LIST' }],
+    }),
+
+    getAvailableTimeSlots: builder.query<
+      ApiResponse<string[]>,
+      { providerId: string; date: string }
+    >({
+      query: ({ providerId, date }) => `/visits/availability?providerId=${providerId}&date=${date}`,
+      providesTags: (result, error, { providerId, date }) => [
+        { type: 'Visit', id: `${providerId}-${date}` },
+      ],
+    }),
   }),
 });
 
@@ -236,4 +328,11 @@ export const {
   useDetectLocationMutation,
   useGetRecentActivitiesQuery,
   useGetPresignedUploadUrlMutation,
+  useGetFavoritesQuery,
+  useAddToFavoritesMutation,
+  useRemoveFromFavoritesMutation,
+  useCheckFavoriteStatusQuery,
+  useGetVisitsQuery,
+  useScheduleVisitMutation,
+  useGetAvailableTimeSlotsQuery,
 } = commonApi;
