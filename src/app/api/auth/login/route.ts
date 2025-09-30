@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    
+
     // Validate input
     const validationResult = loginSchema.safeParse(body);
     if (!validationResult.success) {
@@ -32,9 +32,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email or phone
     const isEmail = identifier.includes('@');
-    const user = await User.findOne(
-      isEmail ? { email: identifier } : { phone: identifier }
-    );
+    const user = await User.findOne(isEmail ? { email: identifier } : { phone: identifier });
 
     if (!user) {
       logApiRequest('POST', '/api/auth/login', undefined, 401, Date.now() - startTime);
@@ -101,22 +99,32 @@ export async function POST(request: NextRequest) {
     await logAuthActivity(user._id.toString(), user.role, 'login', request);
     logApiRequest('POST', '/api/auth/login', user._id.toString(), 200, Date.now() - startTime);
 
-    return NextResponse.json(
+    // Create response with cookie
+    const response = NextResponse.json(
       {
         success: true,
         message: 'Login successful',
         data: {
           user: userData,
-          token,
         },
       },
       { status: 200 }
     );
 
+    // Set httpOnly cookie with the token
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60, // 7 days in seconds
+      path: '/',
+    });
+
+    return response;
   } catch (error) {
     logError('Login error', error, {
       url: request.url,
-      method: 'POST'
+      method: 'POST',
     });
     logApiRequest('POST', '/api/auth/login', undefined, 500, Date.now() - startTime);
 

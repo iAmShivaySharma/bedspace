@@ -15,10 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     await connectDB();
@@ -27,19 +24,19 @@ export async function GET(request: NextRequest) {
     const totalUsers = await User.countDocuments();
     const totalProviders = await User.countDocuments({ role: 'provider' });
     const totalSeekers = await User.countDocuments({ role: 'seeker' });
-    
+
     // Get provider verification stats
-    const pendingProviders = await User.countDocuments({ 
-      role: 'provider', 
-      verificationStatus: 'pending' 
+    const pendingProviders = await User.countDocuments({
+      role: 'provider',
+      verificationStatus: 'pending',
     });
-    const approvedProviders = await User.countDocuments({ 
-      role: 'provider', 
-      verificationStatus: 'approved' 
+    const approvedProviders = await User.countDocuments({
+      role: 'provider',
+      verificationStatus: 'approved',
     });
-    const rejectedProviders = await User.countDocuments({ 
-      role: 'provider', 
-      verificationStatus: 'rejected' 
+    const rejectedProviders = await User.countDocuments({
+      role: 'provider',
+      verificationStatus: 'rejected',
     });
 
     // Mock data for listings and bookings (in production, these would come from actual collections)
@@ -58,14 +55,13 @@ export async function GET(request: NextRequest) {
       totalListings,
       activeListings,
       totalBookings,
-      revenue
+      revenue,
     };
 
     return NextResponse.json({
       success: true,
-      data: stats
+      data: stats,
     });
-
   } catch (error) {
     console.error('Get admin stats error:', error);
     return NextResponse.json(

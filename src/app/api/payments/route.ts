@@ -1,113 +1,165 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuth } from '@/middleware/auth';
-import { connectDB } from '@/lib/mongodb';
+import connectDB from '@/lib/mongodb';
+import { Payment } from '@/models/Payment';
 import { logApiRequest, logError } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    logApiRequest('GET', '/api/payments', undefined, 200, Date.now() - startTime);
+    // Verify authentication
+    const authResult = await verifyAuth(request);
+    if (!authResult.success) {
+      logApiRequest('GET', '/api/payments', undefined, 401, Date.now() - startTime);
+      return NextResponse.json({ success: false, error: authResult.error }, { status: 401 });
+    }
 
+    await connectDB();
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status') || 'all';
+    const role = searchParams.get('role') || 'any'; // payer, payee, any
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const page = parseInt(searchParams.get('page') || '1');
+
+    const user = authResult.user as { id: string; role: string };
+    const skip = (page - 1) * limit;
+
+    let payments;
+
+    if (user.role === 'admin') {
+      // Admin can see all payments
+      const query: any = {};
+      if (status !== 'all') {
+        query.status = status;
+      }
+
+      payments = await Payment.find(query)
+        .populate('bookingId', 'status requestedDate')
+        .populate('listingId', 'title address city')
+        .populate('payerId', 'name email')
+        .populate('payeeId', 'name email')
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(skip);
+    } else {
+      // Users can only see their own payments
+      payments = await (Payment as any).getUserPayments(
+        user.id,
+        role as 'payer' | 'payee' | 'any',
+        {
+          status: status !== 'all' ? status : undefined,
+          limit,
+          skip,
+        }
+      );
+    }
+
+    // Transform payments to match expected format
+    const transformedPayments = payments.map((payment: any) => ({
+      id: payment._id,
+      bookingId: payment.bookingId._id || payment.bookingId,
+      listing: {
+        title: payment.listingId.title,
+        location: `${payment.listingId.address}, ${payment.listingId.city}`,
+      },
+      payer: {
+        name: payment.payerId.name,
+        email: payment.payerId.email,
+      },
+      payee: {
+        name: payment.payeeId.name,
+        email: payment.payeeId.email,
+      },
+      amount: payment.amount,
+      formattedAmount: payment.formattedAmount,
+      currency: payment.currency,
+      status: payment.status,
+      paymentMethod: payment.paymentMethod,
+      transactionId: payment.transactionId,
+      description: payment.description,
+      metadata: payment.metadata,
+      createdAt: payment.createdAt.toISOString(),
+      processedAt: payment.processedAt?.toISOString(),
+      completedAt: payment.completedAt?.toISOString(),
+      failureReason: payment.failureReason,
+    }));
+
+    logApiRequest('GET', '/api/payments', user.id, 200, Date.now() - startTime);
+
+    return NextResponse.json({
+      success: true,
+      data: transformedPayments,
+      pagination: {
+        page,
+        limit,
+        total: transformedPayments.length,
+      },
+    });
+  } catch (error) {
+    logError('Error in GET /api/payments:', error);
+    logApiRequest('GET', '/api/payments', undefined, 500, Date.now() - startTime);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch payments' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+
+  try {
     // Verify authentication
     const authResult = await verifyAuth(request);
     if (!authResult.success) {
       return NextResponse.json({ success: false, error: authResult.error }, { status: 401 });
     }
 
-    const user = authResult.user as { role: string };
     await connectDB();
 
-    // Mock payments data - in real implementation, you'd have a Payments model
-    const mockPayments = [
-      {
-        id: 'pay_001',
-        bookingId: 'book_001',
-        listing: {
-          title: 'Modern Private Room with AC',
-          location: 'Bandra West, Mumbai',
-        },
-        provider: {
-          name: 'Rajesh Kumar',
-        },
-        amount: 90000,
-        status: 'completed',
-        paymentMethod: 'UPI',
-        transactionId: 'TXN123456789',
-        createdAt: '2024-01-15T10:30:00Z',
-        completedAt: '2024-01-15T10:31:00Z',
-        description: 'Security deposit + 6 months rent',
-      },
-      {
-        id: 'pay_002',
-        bookingId: 'book_002',
-        listing: {
-          title: 'Cozy Shared Room in Andheri',
-          location: 'Andheri East, Mumbai',
-        },
-        provider: {
-          name: 'Priya Sharma',
-        },
-        amount: 24000,
-        status: 'pending',
-        paymentMethod: 'Bank Transfer',
-        createdAt: '2024-01-20T14:15:00Z',
-        description: 'Security deposit + 3 months rent',
-      },
-      {
-        id: 'pay_003',
-        bookingId: 'book_003',
-        listing: {
-          title: 'Luxury Studio Apartment',
-          location: 'Powai, Mumbai',
-        },
-        provider: {
-          name: 'Amit Patel',
-        },
-        amount: 50000,
-        status: 'failed',
-        paymentMethod: 'Credit Card',
-        createdAt: '2024-01-18T09:20:00Z',
-        description: 'Security deposit + 2 months rent',
-      },
-      {
-        id: 'pay_004',
-        bookingId: 'book_004',
-        listing: {
-          title: 'Budget Room in Thane',
-          location: 'Thane West, Mumbai',
-        },
-        provider: {
-          name: 'Sunita Joshi',
-        },
-        amount: 15000,
-        status: 'refunded',
-        paymentMethod: 'UPI',
-        transactionId: 'TXN987654321',
-        createdAt: '2024-01-10T16:45:00Z',
-        completedAt: '2024-01-12T11:20:00Z',
-        description: 'Booking cancellation refund',
-      },
-    ];
+    const body = await request.json();
+    const { bookingId, payeeId, listingId, amount, paymentMethod, description, metadata } = body;
 
-    // Filter payments by user role
-    let filteredPayments = mockPayments;
-    if (user.role !== 'admin') {
-      // In real implementation, filter by user ID
-      filteredPayments = mockPayments;
+    if (!bookingId || !payeeId || !listingId || !amount || !paymentMethod || !description) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required payment fields' },
+        { status: 400 }
+      );
     }
 
-    const responseTime = Date.now() - startTime;
-    console.log(`✅ GET /api/payments completed in ${responseTime}ms`);
+    const user = authResult.user as { id: string };
+
+    // Create payment
+    const payment = await (Payment as any).createPayment(
+      bookingId,
+      user.id, // payer
+      payeeId,
+      listingId,
+      amount,
+      paymentMethod,
+      description,
+      metadata
+    );
+
+    logApiRequest('POST', '/api/payments', user.id, 201, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
-      data: filteredPayments,
+      data: {
+        id: payment._id,
+        amount: payment.amount,
+        status: payment.status,
+        paymentMethod: payment.paymentMethod,
+        description: payment.description,
+        createdAt: payment.createdAt.toISOString(),
+      },
     });
   } catch (error) {
-    logError('Error in GET /api/payments:', error);
+    logError('Error in POST /api/payments:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch payments' },
+      { success: false, error: 'Failed to create payment' },
       { status: 500 }
     );
   }

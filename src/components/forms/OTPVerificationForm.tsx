@@ -22,11 +22,11 @@ interface OTPVerificationFormProps {
   onResendOTP: () => void;
 }
 
-export default function OTPVerificationForm({ 
-  email, 
-  onSuccess, 
-  onError, 
-  onResendOTP 
+export default function OTPVerificationForm({
+  email,
+  onSuccess,
+  onError,
+  onResendOTP,
 }: OTPVerificationFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -69,8 +69,7 @@ export default function OTPVerificationForm({
       const result = await response.json();
 
       if (result.success) {
-        // Store token in localStorage
-        localStorage.setItem('token', result.data.token);
+        // Token is now stored in httpOnly cookie by the server
         onSuccess(result.data);
       } else {
         onError(result.error || 'OTP verification failed');
@@ -110,52 +109,47 @@ export default function OTPVerificationForm({
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader className="text-center">
-        <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-          <Mail className="w-6 h-6 text-blue-600" />
+    <Card className='w-full max-w-md mx-auto'>
+      <CardHeader className='text-center'>
+        <div className='mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4'>
+          <Mail className='w-6 h-6 text-blue-600' />
         </div>
         <CardTitle>Verify Your Email</CardTitle>
         <CardDescription>
-          We've sent a 6-digit code to<br />
+          We&apos;ve sent a 6-digit code to
+          <br />
           <strong>{email}</strong>
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
           {/* Hidden identifier field */}
-          <input type="hidden" {...register('identifier')} />
+          <input type='hidden' {...register('identifier')} />
 
           {/* OTP Input */}
-          <div className="space-y-2">
-            <Label htmlFor="otp">Verification Code</Label>
+          <div className='space-y-2'>
+            <Label htmlFor='otp'>Verification Code</Label>
             <Input
-              id="otp"
-              type="text"
-              placeholder="Enter 6-digit code"
+              id='otp'
+              type='text'
+              placeholder='Enter 6-digit code'
               maxLength={6}
               {...register('otp')}
               className={`text-center text-lg tracking-widest ${errors.otp ? 'border-red-500' : ''}`}
-              onChange={(e) => {
+              onChange={e => {
                 // Only allow numbers
                 const value = e.target.value.replace(/\D/g, '');
                 setValue('otp', value);
               }}
             />
-            {errors.otp && (
-              <p className="text-sm text-red-500">{errors.otp.message}</p>
-            )}
+            {errors.otp && <p className='text-sm text-red-500'>{errors.otp.message}</p>}
           </div>
 
           {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full"
-            disabled={isLoading}
-          >
+          <Button type='submit' className='w-full' disabled={isLoading}>
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                 Verifying...
               </>
             ) : (
@@ -164,21 +158,19 @@ export default function OTPVerificationForm({
           </Button>
 
           {/* Resend OTP */}
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-2">
-              Didn't receive the code?
-            </p>
+          <div className='text-center'>
+            <p className='text-sm text-gray-600 mb-2'>Didn&apos;t receive the code?</p>
             {canResend ? (
               <Button
-                type="button"
-                variant="ghost"
+                type='button'
+                variant='ghost'
                 onClick={handleResendOTP}
                 disabled={isResending}
-                className="text-blue-600 hover:text-blue-800"
+                className='text-blue-600 hover:text-blue-800'
               >
                 {isResending ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                     Resending...
                   </>
                 ) : (
@@ -186,9 +178,7 @@ export default function OTPVerificationForm({
                 )}
               </Button>
             ) : (
-              <p className="text-sm text-gray-500">
-                Resend code in {countdown}s
-              </p>
+              <p className='text-sm text-gray-500'>Resend code in {countdown}s</p>
             )}
           </div>
         </form>

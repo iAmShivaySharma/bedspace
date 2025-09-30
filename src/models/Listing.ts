@@ -145,7 +145,7 @@ const ListingSchema = new Schema<IListing>(
     facilities: [
       {
         type: String,
-        enum: FACILITIES,
+        trim: true,
       },
     ],
     images: [ListingImageSchema],
@@ -341,6 +341,11 @@ ListingSchema.pre('save', function (next) {
   next();
 });
 
-const Listing = mongoose.models.Listing || mongoose.model<IListing>('Listing', ListingSchema);
+// Clear existing model to force reload with new schema
+if (mongoose.models.Listing) {
+  delete mongoose.models.Listing;
+}
+
+const Listing = mongoose.model<IListing>('Listing', ListingSchema);
 
 export { Listing };

@@ -17,6 +17,17 @@ export interface AuthenticatedUser {
   lastLogin?: Date;
   createdAt?: Date;
   updatedAt?: Date;
+  // Provider-specific fields
+  verificationStatus?: 'pending' | 'approved' | 'rejected';
+  verificationDocuments?: any[];
+  businessName?: string;
+  businessAddress?: string;
+  businessPhone?: string;
+  rating?: number;
+  totalReviews?: number;
+  totalListings?: number;
+  verifiedAt?: Date;
+  rejectionReason?: string;
 }
 
 export interface AuthenticatedRequest extends NextRequest {
@@ -33,8 +44,11 @@ export async function authenticate(
       return { user: null, error: 'No headers available' };
     }
 
+    // Try to get token from cookie first, then fall back to Authorization header for API compatibility
+    const cookieToken = request.cookies.get('auth-token')?.value;
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const token = cookieToken || headerToken;
 
     if (!token) {
       return { user: null, error: 'No token provided' };
@@ -53,23 +67,38 @@ export async function authenticate(
     }
 
     const userObj = user.toObject();
-    return {
-      user: {
-        _id: userObj._id.toString(),
-        id: userObj._id.toString(),
-        email: userObj.email,
-        role: userObj.role,
-        name: userObj.name,
-        isVerified: userObj.isVerified,
-        phone: userObj.phone,
-        avatar: userObj.avatar,
-        isEmailVerified: userObj.isEmailVerified,
-        isPhoneVerified: userObj.isPhoneVerified,
-        lastLogin: userObj.lastLogin,
-        createdAt: userObj.createdAt,
-        updatedAt: userObj.updatedAt,
-      } as AuthenticatedUser,
+    const authenticatedUser: AuthenticatedUser = {
+      _id: userObj._id.toString(),
+      id: userObj._id.toString(),
+      email: userObj.email,
+      role: userObj.role,
+      name: userObj.name,
+      isVerified: userObj.isVerified,
+      phone: userObj.phone,
+      avatar: userObj.avatar,
+      isEmailVerified: userObj.isEmailVerified,
+      isPhoneVerified: userObj.isPhoneVerified,
+      lastLogin: userObj.lastLogin,
+      createdAt: userObj.createdAt,
+      updatedAt: userObj.updatedAt,
     };
+
+    // Add provider-specific fields if user is a provider
+    if (userObj.role === 'provider') {
+      const providerObj = userObj as any; // Type assertion for provider fields
+      authenticatedUser.verificationStatus = providerObj.verificationStatus;
+      authenticatedUser.verificationDocuments = providerObj.verificationDocuments;
+      authenticatedUser.businessName = providerObj.businessName;
+      authenticatedUser.businessAddress = providerObj.businessAddress;
+      authenticatedUser.businessPhone = providerObj.businessPhone;
+      authenticatedUser.rating = providerObj.rating;
+      authenticatedUser.totalReviews = providerObj.totalReviews;
+      authenticatedUser.totalListings = providerObj.totalListings;
+      authenticatedUser.verifiedAt = providerObj.verifiedAt;
+      authenticatedUser.rejectionReason = providerObj.rejectionReason;
+    }
+
+    return { user: authenticatedUser };
   } catch (error) {
     console.error('Authentication error:', error);
     return { user: null, error: 'Authentication failed' };
@@ -86,8 +115,11 @@ export async function verifyAuth(
       return { success: false, error: 'No headers available' };
     }
 
+    // Try to get token from cookie first, then fall back to Authorization header for API compatibility
+    const cookieToken = request.cookies.get('auth-token')?.value;
     const authHeader = request.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const headerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    const token = cookieToken || headerToken;
 
     if (!token) {
       return { success: false, error: 'No token provided' };
@@ -105,23 +137,41 @@ export async function verifyAuth(
       return { success: false, error: 'User not found' };
     }
 
+    const userObj = user.toObject();
+    const authenticatedUser: AuthenticatedUser = {
+      _id: userObj._id.toString(),
+      id: userObj._id.toString(),
+      email: userObj.email,
+      role: userObj.role,
+      name: userObj.name,
+      isVerified: userObj.isVerified,
+      phone: userObj.phone,
+      avatar: userObj.avatar,
+      isEmailVerified: userObj.isEmailVerified,
+      isPhoneVerified: userObj.isPhoneVerified,
+      lastLogin: userObj.lastLogin,
+      createdAt: userObj.createdAt,
+      updatedAt: userObj.updatedAt,
+    };
+
+    // Add provider-specific fields if user is a provider
+    if (userObj.role === 'provider') {
+      const providerObj = userObj as any; // Type assertion for provider fields
+      authenticatedUser.verificationStatus = providerObj.verificationStatus;
+      authenticatedUser.verificationDocuments = providerObj.verificationDocuments;
+      authenticatedUser.businessName = providerObj.businessName;
+      authenticatedUser.businessAddress = providerObj.businessAddress;
+      authenticatedUser.businessPhone = providerObj.businessPhone;
+      authenticatedUser.rating = providerObj.rating;
+      authenticatedUser.totalReviews = providerObj.totalReviews;
+      authenticatedUser.totalListings = providerObj.totalListings;
+      authenticatedUser.verifiedAt = providerObj.verifiedAt;
+      authenticatedUser.rejectionReason = providerObj.rejectionReason;
+    }
+
     return {
       success: true,
-      user: {
-        _id: user._id.toString(),
-        id: user._id.toString(),
-        email: user.email,
-        role: user.role,
-        name: user.name,
-        isVerified: user.isVerified,
-        phone: user.phone,
-        avatar: user.avatar,
-        isEmailVerified: user.isEmailVerified,
-        isPhoneVerified: user.isPhoneVerified,
-        lastLogin: user.lastLogin,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
+      user: authenticatedUser,
     };
   } catch (error) {
     console.error('Authentication error:', error);

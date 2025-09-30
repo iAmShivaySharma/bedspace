@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     const body = await request.json();
-    
+
     // Validate input
     const validationResult = registerSchema.safeParse(body);
     if (!validationResult.success) {
@@ -34,19 +34,17 @@ export async function POST(request: NextRequest) {
 
     // Check if user already exists
     const existingUser = await User.findOne({
-      $or: [
-        { email },
-        ...(phone ? [{ phone }] : []),
-      ],
+      $or: [{ email }, ...(phone ? [{ phone }] : [])],
     });
 
     if (existingUser) {
       return NextResponse.json(
         {
           success: false,
-          error: existingUser.email === email 
-            ? 'Email already registered' 
-            : 'Phone number already registered',
+          error:
+            existingUser.email === email
+              ? 'Email already registered'
+              : 'Phone number already registered',
         },
         { status: 409 }
       );
@@ -117,10 +115,9 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-
   } catch (error) {
     console.error('Registration error:', error);
-    
+
     // Handle duplicate key errors
     const mongoError = error as any; // Type assertion for MongoDB error
     if (mongoError.code === 11000) {
@@ -137,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     logError('Registration error', error, {
       url: request.url,
-      method: 'POST'
+      method: 'POST',
     });
     logApiRequest('POST', '/api/auth/register', undefined, 500, Date.now() - startTime);
 

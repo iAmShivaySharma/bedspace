@@ -1,96 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Mock search data for now
-const mockListings = [
-  {
-    id: '1',
-    title: 'Cozy Bed Space in Downtown',
-    description: 'Comfortable shared room with all amenities',
-    location: 'Downtown, Mumbai',
-    price: 8000,
-    type: 'shared',
-    gender: 'any',
-    amenities: ['wifi', 'ac', 'laundry', 'kitchen'],
-    images: ['/api/placeholder/400/300'],
-    provider: {
-      name: 'John Smith',
-      rating: 4.5,
-      verified: true
-    },
-    coordinates: { lat: 19.0760, lng: 72.8777 }
-  },
-  {
-    id: '2',
-    title: 'Private Room Near IT Park',
-    description: 'Spacious private room with attached bathroom',
-    location: 'Bandra, Mumbai',
-    price: 12000,
-    type: 'private',
-    gender: 'male',
-    amenities: ['wifi', 'ac', 'parking', 'security'],
-    images: ['/api/placeholder/400/300'],
-    provider: {
-      name: 'Sarah Johnson',
-      rating: 4.8,
-      verified: true
-    },
-    coordinates: { lat: 19.0596, lng: 72.8295 }
-  },
-  {
-    id: '3',
-    title: 'Budget Friendly Shared Space',
-    description: 'Clean and affordable bed space for students',
-    location: 'Andheri, Mumbai',
-    price: 6000,
-    type: 'shared',
-    gender: 'female',
-    amenities: ['wifi', 'kitchen', 'laundry'],
-    images: ['/api/placeholder/400/300'],
-    provider: {
-      name: 'Mike Wilson',
-      rating: 4.2,
-      verified: true
-    },
-    coordinates: { lat: 19.1136, lng: 72.8697 }
-  },
-  {
-    id: '4',
-    title: 'Luxury Bed Space with Pool',
-    description: 'Premium accommodation with swimming pool access',
-    location: 'Powai, Mumbai',
-    price: 15000,
-    type: 'private',
-    gender: 'any',
-    amenities: ['wifi', 'ac', 'pool', 'gym', 'parking'],
-    images: ['/api/placeholder/400/300'],
-    provider: {
-      name: 'Alice Brown',
-      rating: 4.9,
-      verified: true
-    },
-    coordinates: { lat: 19.1197, lng: 72.9056 }
-  },
-  {
-    id: '5',
-    title: 'Student Hostel Style Room',
-    description: 'Affordable accommodation for students and working professionals',
-    location: 'Thane, Mumbai',
-    price: 5500,
-    type: 'shared',
-    gender: 'any',
-    amenities: ['wifi', 'kitchen', 'study_room'],
-    images: ['/api/placeholder/400/300'],
-    provider: {
-      name: 'Bob Davis',
-      rating: 4.0,
-      verified: true
-    },
-    coordinates: { lat: 19.2183, lng: 72.9781 }
-  }
-];
+import connectDB from '@/lib/mongodb';
+import { Listing } from '@/models/Listing';
 
 export async function GET(request: NextRequest) {
   try {
+    await connectDB();
+
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q') || '';
     const location = searchParams.get('location') || '';
@@ -98,45 +13,111 @@ export async function GET(request: NextRequest) {
     const maxPrice = parseInt(searchParams.get('maxPrice') || '999999');
     const type = searchParams.get('type') || '';
     const gender = searchParams.get('gender') || '';
-    const amenities = searchParams.get('amenities')?.split(',') || [];
+    const amenities = searchParams.get('amenities')?.split(',').filter(Boolean) || [];
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
 
-    // Filter listings based on search criteria
-    let filteredListings = mockListings.filter(listing => {
-      // Text search in title and description
-      const matchesQuery = !query || 
-        listing.title.toLowerCase().includes(query.toLowerCase()) ||
-        listing.description.toLowerCase().includes(query.toLowerCase());
+    // Build database query
+    const dbQuery: any = {
+      isActive: true,
+      isApproved: true,
+      availableFrom: { $lte: new Date() },
+    };
 
-      // Location search
-      const matchesLocation = !location || 
-        listing.location.toLowerCase().includes(location.toLowerCase());
+    // Text search in title and description
+    if (query) {
+      dbQuery.$or = [
+        { title: { $regex: query, $options: 'i' } },
+        { description: { $regex: query, $options: 'i' } },
+        { city: { $regex: query, $options: 'i' } },
+        { address: { $regex: query, $options: 'i' } },
+      ];
+    }
 
-      // Price range
-      const matchesPrice = listing.price >= minPrice && listing.price <= maxPrice;
+    // Location search
+    if (location) {
+      dbQuery.$and = dbQuery.$and || [];
+      dbQuery.$and.push({
+        $or: [
+          { city: { $regex: location, $options: 'i' } },
+          { address: { $regex: location, $options: 'i' } },
+          { state: { $regex: location, $options: 'i' } },
+        ],
+      });
+    }
 
-      // Room type
-      const matchesType = !type || listing.type === type;
+    // Price range
+    if (minPrice > 0 || maxPrice < 999999) {
+      dbQuery.rent = {};
+      if (minPrice > 0) dbQuery.rent.$gte = minPrice;
+      if (maxPrice < 999999) dbQuery.rent.$lte = maxPrice;
+    }
 
-      // Gender preference
-      const matchesGender = !gender || listing.gender === 'any' || listing.gender === gender;
+    // Room type mapping
+    if (type) {
+      const typeMapping: { [key: string]: string } = {
+        private: 'single',
+        shared: 'shared',
+        entire: 'private',
+      };
+      dbQuery.roomType = typeMapping[type] || type;
+    }
 
-      // Amenities
-      const matchesAmenities = amenities.length === 0 || 
-        amenities.every(amenity => listing.amenities.includes(amenity));
+    // Gender preference
+    if (gender && gender !== 'any') {
+      dbQuery.genderPreference = { $in: [gender, 'any'] };
+    }
 
-      return matchesQuery && matchesLocation && matchesPrice && 
-             matchesType && matchesGender && matchesAmenities;
+    // Amenities/Facilities
+    if (amenities.length > 0) {
+      dbQuery.facilities = { $in: amenities };
+    }
+
+    // Get listings with pagination
+    const listings = await Listing.find(dbQuery)
+      .populate('providerId', 'name email avatar verificationStatus')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip((page - 1) * limit);
+
+    const totalResults = await Listing.countDocuments(dbQuery);
+
+    // Transform listings to match frontend format
+    const transformedListings = listings.map(listing => {
+      const provider = listing.providerId as any; // Cast to any to access populated fields
+      return {
+        id: listing._id.toString(),
+        title: listing.title,
+        description: listing.description,
+        location: `${listing.address}, ${listing.city}`,
+        price: listing.rent,
+        type:
+          listing.roomType === 'single'
+            ? 'private'
+            : listing.roomType === 'shared'
+              ? 'shared'
+              : 'entire',
+        gender: listing.genderPreference,
+        amenities: listing.facilities || [],
+        images: listing.images?.map((img: any) => img.fileUrl) || ['/api/placeholder/400/300'],
+        provider: {
+          id: provider._id.toString(),
+          name: provider.name,
+          rating: (4.0 + Math.random()).toFixed(1), // Placeholder rating
+          verified: provider.verificationStatus === 'approved',
+        },
+        coordinates: listing.coordinates || { lat: 19.076, lng: 72.8777 }, // Default Mumbai coords
+        rent: listing.rent,
+        securityDeposit: listing.securityDeposit,
+        roomType: listing.roomType,
+        genderPreference: listing.genderPreference,
+        availableFrom: listing.availableFrom,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+      };
     });
 
-    // Pagination
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedListings = filteredListings.slice(startIndex, endIndex);
-
     // Calculate pagination info
-    const totalResults = filteredListings.length;
     const totalPages = Math.ceil(totalResults / limit);
     const hasNextPage = page < totalPages;
     const hasPrevPage = page > 1;
@@ -144,14 +125,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        listings: paginatedListings,
+        listings: transformedListings,
         pagination: {
           page,
           limit,
           totalResults,
           totalPages,
           hasNextPage,
-          hasPrevPage
+          hasPrevPage,
         },
         filters: {
           query,
@@ -160,17 +141,13 @@ export async function GET(request: NextRequest) {
           maxPrice,
           type,
           gender,
-          amenities
-        }
-      }
+          amenities,
+        },
+      },
     });
-
   } catch (error) {
     console.error('Search error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Search failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Search failed' }, { status: 500 });
   }
 }
 
@@ -183,7 +160,7 @@ export async function POST(request: NextRequest) {
     // Mock location suggestions
     const locations = [
       'Downtown, Mumbai',
-      'Bandra, Mumbai', 
+      'Bandra, Mumbai',
       'Andheri, Mumbai',
       'Powai, Mumbai',
       'Thane, Mumbai',
@@ -191,18 +168,17 @@ export async function POST(request: NextRequest) {
       'Malad, Mumbai',
       'Borivali, Mumbai',
       'Kandivali, Mumbai',
-      'Goregaon, Mumbai'
+      'Goregaon, Mumbai',
     ];
 
-    const suggestions = locations.filter(location =>
-      location.toLowerCase().includes(query.toLowerCase())
-    ).slice(0, 5);
+    const suggestions = locations
+      .filter(location => location.toLowerCase().includes(query.toLowerCase()))
+      .slice(0, 5);
 
     return NextResponse.json({
       success: true,
-      data: suggestions
+      data: suggestions,
     });
-
   } catch (error) {
     console.error('Location suggestions error:', error);
     return NextResponse.json(

@@ -3,26 +3,31 @@ const bcrypt = require('bcryptjs');
 require('dotenv').config({ path: '.env.local' });
 
 // User schema (simplified for seeding)
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  name: { type: String, required: true },
-  phone: { type: String },
-  role: { type: String, required: true },
-  isVerified: { type: Boolean, default: false },
-  isEmailVerified: { type: Boolean, default: false },
-  isPhoneVerified: { type: Boolean, default: false },
-  verificationStatus: { type: String, default: 'pending' },
-  businessName: { type: String },
-  businessAddress: { type: String },
-  businessPhone: { type: String },
-  verificationDocuments: [{
-    type: { type: String },
-    url: { type: String },
-    status: { type: String, default: 'pending' },
-    uploadedAt: { type: Date, default: Date.now }
-  }],
-}, { timestamps: true });
+const userSchema = new mongoose.Schema(
+  {
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    name: { type: String, required: true },
+    phone: { type: String },
+    role: { type: String, required: true },
+    isVerified: { type: Boolean, default: false },
+    isEmailVerified: { type: Boolean, default: false },
+    isPhoneVerified: { type: Boolean, default: false },
+    verificationStatus: { type: String, default: 'pending' },
+    businessName: { type: String },
+    businessAddress: { type: String },
+    businessPhone: { type: String },
+    verificationDocuments: [
+      {
+        type: { type: String },
+        url: { type: String },
+        status: { type: String, default: 'pending' },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
+  },
+  { timestamps: true }
+);
 
 const User = mongoose.model('User', userSchema);
 
@@ -38,7 +43,7 @@ const sampleProviders = [
     verificationStatus: 'approved',
     businessName: 'Comfort Stays',
     businessAddress: '123 Main St, Downtown',
-    businessPhone: '+1234567890'
+    businessPhone: '+1234567890',
   },
   {
     email: 'provider2@example.com',
@@ -50,7 +55,7 @@ const sampleProviders = [
     verificationStatus: 'approved',
     businessName: 'City Beds',
     businessAddress: '456 Oak Ave, Midtown',
-    businessPhone: '+1234567891'
+    businessPhone: '+1234567891',
   },
   {
     email: 'provider3@example.com',
@@ -62,8 +67,8 @@ const sampleProviders = [
     verificationStatus: 'approved',
     businessName: 'Budget Rooms',
     businessAddress: '789 Pine St, Uptown',
-    businessPhone: '+1234567892'
-  }
+    businessPhone: '+1234567892',
+  },
 ];
 
 const sampleSeekers = [
@@ -73,7 +78,7 @@ const sampleSeekers = [
     phone: '+1234567893',
     role: 'seeker',
     isVerified: true,
-    isEmailVerified: true
+    isEmailVerified: true,
   },
   {
     email: 'seeker2@example.com',
@@ -81,7 +86,7 @@ const sampleSeekers = [
     phone: '+1234567894',
     role: 'seeker',
     isVerified: true,
-    isEmailVerified: true
+    isEmailVerified: true,
   },
   {
     email: 'seeker3@example.com',
@@ -89,8 +94,8 @@ const sampleSeekers = [
     phone: '+1234567895',
     role: 'seeker',
     isVerified: true,
-    isEmailVerified: true
-  }
+    isEmailVerified: true,
+  },
 ];
 
 async function seedData() {
@@ -99,7 +104,7 @@ async function seedData() {
     await mongoose.connect(process.env.MONGODB_URI, {
       dbName: process.env.MONGODB_DB,
     });
-    
+
     console.log('Connected to MongoDB');
 
     // Clear existing data (except admin)
@@ -119,14 +124,14 @@ async function seedData() {
           {
             type: 'id_card',
             url: '/uploads/sample-id.jpg',
-            status: 'approved'
+            status: 'approved',
           },
           {
             type: 'address_proof',
             url: '/uploads/sample-address.jpg',
-            status: 'approved'
-          }
-        ]
+            status: 'approved',
+          },
+        ],
       });
       await provider.save();
       providers.push(provider);
@@ -137,7 +142,7 @@ async function seedData() {
     for (const seekerData of sampleSeekers) {
       const seeker = new User({
         ...seekerData,
-        password: hashedPassword
+        password: hashedPassword,
       });
       await seeker.save();
       seekers.push(seeker);
@@ -152,7 +157,6 @@ async function seedData() {
     console.log('\nAdmin credentials:');
     console.log('Email: admin@bedspace.com');
     console.log('Password: admin123');
-
   } catch (error) {
     console.error('Error seeding data:', error);
   } finally {

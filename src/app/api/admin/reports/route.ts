@@ -7,16 +7,13 @@ import { logApiRequest, logError } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // Verify admin authentication
     const authResult = await verifyAuth(request);
     if (!authResult.success || authResult.user?.role !== 'admin') {
       logApiRequest('GET', '/api/admin/reports', authResult.user?.id, 401, Date.now() - startTime);
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 401 });
     }
 
     await connectDB();
@@ -27,7 +24,7 @@ export async function GET(request: NextRequest) {
     // Calculate date range
     const now = new Date();
     let startDate: Date;
-    
+
     switch (timeRange) {
       case '7d':
         startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -45,24 +42,24 @@ export async function GET(request: NextRequest) {
     // Get user reports
     const totalUsers = await User.countDocuments();
     const newUsersThisMonth = await User.countDocuments({
-      createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) }
+      createdAt: { $gte: new Date(now.getFullYear(), now.getMonth(), 1) },
     });
     const activeUsers = await User.countDocuments({ isActive: { $ne: false } });
-    
+
     const usersByRole = await User.aggregate([
       {
         $group: {
           _id: '$role',
-          count: { $sum: 1 }
-        }
+          count: { $sum: 1 },
+        },
       },
       {
         $project: {
           role: '$_id',
           count: 1,
-          _id: 0
-        }
-      }
+          _id: 0,
+        },
+      },
     ]);
 
     // Mock listing reports (in production, this would come from Listings collection)
@@ -70,14 +67,14 @@ export async function GET(request: NextRequest) {
     const activeListings = Math.floor(totalListings * 0.8); // 80% are active
     const pendingApproval = Math.floor(totalListings * 0.1); // 10% pending
     const averagePrice = 12500;
-    
+
     const listingsByLocation = [
       { location: 'Bandra West, Mumbai', count: Math.floor(totalListings * 0.15) },
       { location: 'Andheri East, Mumbai', count: Math.floor(totalListings * 0.12) },
-      { location: 'Powai, Mumbai', count: Math.floor(totalListings * 0.10) },
+      { location: 'Powai, Mumbai', count: Math.floor(totalListings * 0.1) },
       { location: 'Thane West, Mumbai', count: Math.floor(totalListings * 0.08) },
       { location: 'Worli, Mumbai', count: Math.floor(totalListings * 0.07) },
-      { location: 'Malad West, Mumbai', count: Math.floor(totalListings * 0.06) }
+      { location: 'Malad West, Mumbai', count: Math.floor(totalListings * 0.06) },
     ];
 
     // Mock booking reports (in production, this would come from Bookings collection)
@@ -91,46 +88,46 @@ export async function GET(request: NextRequest) {
     for (let i = 5; i >= 0; i--) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthName = monthDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-      const bookingCount = Math.floor(totalBookings / 6 * (0.8 + Math.random() * 0.4));
+      const bookingCount = Math.floor((totalBookings / 6) * (0.8 + Math.random() * 0.4));
       const monthRevenue = bookingCount * averagePrice * 15;
-      
+
       bookingsByMonth.push({
         month: monthName,
         count: bookingCount,
-        revenue: monthRevenue
+        revenue: monthRevenue,
       });
     }
 
     // Get activity reports
     const totalActivities = await Activity.countDocuments({
-      createdAt: { $gte: startDate }
+      createdAt: { $gte: startDate },
     });
 
     const topActions = await Activity.aggregate([
       {
         $match: {
-          createdAt: { $gte: startDate }
-        }
+          createdAt: { $gte: startDate },
+        },
       },
       {
         $group: {
           _id: '$action',
-          count: { $sum: 1 }
-        }
+          count: { $sum: 1 },
+        },
       },
       {
         $project: {
           action: '$_id',
           count: 1,
-          _id: 0
-        }
+          _id: 0,
+        },
       },
       {
-        $sort: { count: -1 }
+        $sort: { count: -1 },
       },
       {
-        $limit: 10
-      }
+        $limit: 10,
+      },
     ]);
 
     // Generate daily activity data
@@ -139,14 +136,14 @@ export async function GET(request: NextRequest) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-      
+
       const dayActivities = await Activity.countDocuments({
-        createdAt: { $gte: dayStart, $lt: dayEnd }
+        createdAt: { $gte: dayStart, $lt: dayEnd },
       });
-      
+
       dailyActivity.push({
         date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        count: dayActivities
+        count: dayActivities,
       });
     }
 
@@ -155,44 +152,43 @@ export async function GET(request: NextRequest) {
         totalUsers,
         newUsersThisMonth,
         activeUsers,
-        usersByRole
+        usersByRole,
       },
       listingReports: {
         totalListings,
         activeListings,
         pendingApproval,
         averagePrice,
-        listingsByLocation
+        listingsByLocation,
       },
       bookingReports: {
         totalBookings,
         completedBookings,
         totalRevenue,
         averageBookingValue,
-        bookingsByMonth
+        bookingsByMonth,
       },
       activityReports: {
         totalActivities,
         topActions,
-        dailyActivity
-      }
+        dailyActivity,
+      },
     };
 
     logApiRequest('GET', '/api/admin/reports', authResult.user.id, 200, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
-      data: reportData
+      data: reportData,
+    });
+  } catch (error) {
+    logError('Get reports error', error, {
+      url: request.url,
+      method: 'GET',
     });
 
-  } catch (error) {
-    logError('Get reports error', error, { 
-      url: request.url,
-      method: 'GET'
-    });
-    
     logApiRequest('GET', '/api/admin/reports', undefined, 500, Date.now() - startTime);
-    
+
     return NextResponse.json(
       { success: false, error: 'Failed to generate reports' },
       { status: 500 }

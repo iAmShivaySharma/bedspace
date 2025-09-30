@@ -28,14 +28,13 @@ export async function GET(request: NextRequest) {
       savedListings: Math.floor(Math.random() * 15) + 5, // 5-19
       activeBookings: Math.floor(Math.random() * 5) + 1, // 1-5
       messages: Math.floor(Math.random() * 10) + 2, // 2-11
-      searchAlerts: Math.floor(Math.random() * 3) + 1 // 1-3
+      searchAlerts: Math.floor(Math.random() * 3) + 1, // 1-3
     };
 
     return NextResponse.json({
       success: true,
-      data: stats
+      data: stats,
     });
-
   } catch (error) {
     console.error('Get seeker stats error:', error);
     return NextResponse.json(

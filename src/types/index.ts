@@ -2,6 +2,7 @@ import { ObjectId } from 'mongoose';
 
 export interface User {
   _id: string;
+  id: string;
   email: string;
   phone?: string;
   name: string;
@@ -85,21 +86,42 @@ export interface BookingRequest {
 
 export interface Message {
   _id: string;
+  id: string;
   conversationId: string;
   senderId: string;
   receiverId: string;
   content: string;
   messageType: 'text' | 'image' | 'file';
   isRead: boolean;
-  createdAt: Date;
+  createdAt: string;
+  sender?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+}
+
+export interface ConversationParticipant {
+  id: string;
+  name: string;
+  avatar?: string;
+  role: 'seeker' | 'provider' | 'admin';
+  email: string;
 }
 
 export interface Conversation {
   _id: string;
+  id: string;
   participants: string[];
+  participant: ConversationParticipant;
   lastMessage?: Message;
-  lastMessageAt: Date;
-  createdAt: Date;
+  lastMessageAt: string;
+  createdAt: string;
+  unreadCount: number;
+  listing?: {
+    id: string;
+    title: string;
+  };
 }
 
 export interface SearchFilters {

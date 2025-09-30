@@ -1,13 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Calendar, MapPin, User, Clock, CreditCard, MessageCircle } from 'lucide-react';
+import { useGetSeekerBookingsQuery, useCancelBookingRequestMutation } from '@/lib/api/seekerApi';
+import { toast } from 'sonner';
+import { PageSkeleton } from '@/components/ui/page-skeleton';
 
-interface Booking {
+// Interface for the populated booking data returned by API
+interface PopulatedBooking {
   id: string;
   listing: {
     id: string;
@@ -20,17 +24,20 @@ interface Booking {
     id: string;
     name: string;
     email: string;
-    phone?: string;
+    phone: string;
   };
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'completed';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   checkIn: string;
-  checkOut?: string;
+  checkOut?: string | null;
   duration: number;
   totalAmount: number;
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentStatus: string;
   createdAt: string;
   requestDate: string;
   moveInDate: string;
+  message: string;
+  responseMessage?: string;
+  respondedAt?: string;
 }
 
 const statusColors = {
@@ -49,88 +56,52 @@ const paymentStatusColors = {
 };
 
 export default function BookingsPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+  const {
+    data: bookingsResponse,
+    isLoading,
+    error,
+  } = useGetSeekerBookingsQuery({
+    status: filter === 'all' ? undefined : filter,
+  });
+  const [cancelBookingRequest] = useCancelBookingRequestMutation();
 
-  useEffect(() => {
-    fetchBookings();
-  }, []);
-
-  const fetchBookings = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/seeker/bookings', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setBookings(data.data || []);
-      }
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const bookings: any = bookingsResponse?.data || [];
 
   const cancelBooking = async (bookingId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/seeker/bookings/${bookingId}/cancel`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        fetchBookings(); // Refresh bookings
-      }
+      await cancelBookingRequest(bookingId).unwrap();
+      toast.success('Booking cancelled successfully');
     } catch (error) {
       console.error('Error cancelling booking:', error);
+      toast.error('Failed to cancel booking');
     }
   };
 
-  const filteredBookings = bookings.filter(booking => 
-    filter === 'all' || booking.status === filter
+  const filteredBookings = bookings.filter(
+    (booking: { status: string }) => filter === 'all' || booking.status === filter
   );
 
-  if (loading) {
-    return (
-      <DashboardLayout title="My Bookings">
-        <div className="p-6 space-y-6">
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <CardContent className="p-6">
-                  <div className="h-6 bg-gray-200 rounded mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </DashboardLayout>
-    );
+  if (isLoading) {
+    return <PageSkeleton type='list' />;
   }
 
   return (
-    <DashboardLayout title="My Bookings">
-      <div className="p-6 space-y-6">
+    <DashboardLayout title='My Bookings'>
+      <div className='p-6 space-y-6'>
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className='flex justify-between items-center'>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Bookings</h1>
-            <p className="text-gray-600">
+            <h1 className='text-2xl font-bold text-gray-900'>My Bookings</h1>
+            <p className='text-gray-600'>
               {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
             </p>
           </div>
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit">
-          {['all', 'pending', 'approved', 'completed', 'cancelled'].map((status) => (
+        <div className='flex space-x-1 bg-gray-100 p-1 rounded-lg w-fit'>
+          {['all', 'pending', 'approved', 'completed', 'cancelled'].map(status => (
             <button
               key={status}
               onClick={() => setFilter(status)}
@@ -147,120 +118,254 @@ export default function BookingsPage() {
 
         {/* Bookings List */}
         {filteredBookings.length === 0 ? (
-          <Card className="text-center py-12">
+          <Card className='text-center py-12'>
             <CardContent>
-              <Calendar className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <Calendar className='h-16 w-16 text-gray-300 mx-auto mb-4' />
+              <h3 className='text-lg font-semibold text-gray-900 mb-2'>
                 {filter === 'all' ? 'No bookings yet' : `No ${filter} bookings`}
               </h3>
-              <p className="text-gray-600 mb-4">
-                {filter === 'all' 
+              <p className='text-gray-600 mb-4'>
+                {filter === 'all'
                   ? 'Start exploring and book your perfect space.'
-                  : `You don't have any ${filter} bookings at the moment.`
-                }
+                  : `You don't have any ${filter} bookings at the moment.`}
               </p>
               {filter === 'all' && (
-                <Button onClick={() => window.location.href = '/search'}>
-                  Browse Listings
-                </Button>
+                <Button onClick={() => (window.location.href = '/search')}>Browse Listings</Button>
               )}
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {filteredBookings.map((booking) => (
-              <Card key={booking.id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    {/* Listing Info */}
-                    <div className="flex gap-4">
-                      <img
-                        src={booking.listing.images[0] || '/images/placeholder-room.jpg'}
-                        alt={booking.listing.title}
-                        className="w-20 h-20 rounded-lg object-cover"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 mb-1">
-                          {booking.listing.title}
-                        </h3>
-                        <div className="flex items-center text-gray-600 mb-2">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          <span className="text-sm">{booking.listing.location}</span>
-                        </div>
-                        <div className="flex items-center text-gray-600">
-                          <User className="h-4 w-4 mr-1" />
-                          <span className="text-sm">Provider: {booking.provider.name}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Booking Details */}
-                    <div className="flex flex-col lg:items-end gap-2">
-                      <div className="flex gap-2">
-                        <Badge className={statusColors[booking.status]}>
-                          {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                        </Badge>
-                        <Badge className={paymentStatusColors[booking.paymentStatus]}>
-                          {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex items-center text-gray-600 text-sm">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        <span>Move-in: {new Date(booking.moveInDate).toLocaleDateString()}</span>
-                      </div>
-                      
-                      <div className="flex items-center text-gray-600 text-sm">
-                        <Clock className="h-4 w-4 mr-1" />
-                        <span>Duration: {booking.duration} months</span>
-                      </div>
-                      
-                      <div className="flex items-center text-gray-900 font-semibold">
-                        <CreditCard className="h-4 w-4 mr-1" />
-                        <span>₹{booking.totalAmount.toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col gap-2 lg:min-w-[120px]">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.location.href = `/messages?provider=${booking.provider.id}`}
+          <div className='space-y-4'>
+            {filteredBookings.map(
+              (booking: {
+                id: Key | null | undefined;
+                listing: {
+                  images: any[];
+                  title:
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | ReactElement<unknown, string | JSXElementConstructor<any>>
+                    | Iterable<ReactNode>
+                    | Promise<
+                        | string
+                        | number
+                        | bigint
+                        | boolean
+                        | ReactPortal
+                        | ReactElement<unknown, string | JSXElementConstructor<any>>
+                        | Iterable<ReactNode>
+                        | null
+                        | undefined
                       >
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        Message
-                      </Button>
-                      
-                      {booking.status === 'pending' && (
+                    | null
+                    | undefined;
+                  location:
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | ReactElement<unknown, string | JSXElementConstructor<any>>
+                    | Iterable<ReactNode>
+                    | ReactPortal
+                    | Promise<
+                        | string
+                        | number
+                        | bigint
+                        | boolean
+                        | ReactPortal
+                        | ReactElement<unknown, string | JSXElementConstructor<any>>
+                        | Iterable<ReactNode>
+                        | null
+                        | undefined
+                      >
+                    | null
+                    | undefined;
+                };
+                provider: {
+                  name:
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | ReactElement<unknown, string | JSXElementConstructor<any>>
+                    | Iterable<ReactNode>
+                    | ReactPortal
+                    | Promise<
+                        | string
+                        | number
+                        | bigint
+                        | boolean
+                        | ReactPortal
+                        | ReactElement<unknown, string | JSXElementConstructor<any>>
+                        | Iterable<ReactNode>
+                        | null
+                        | undefined
+                      >
+                    | null
+                    | undefined;
+                  id: any;
+                };
+                status: string;
+                paymentStatus: string;
+                moveInDate: string | number | Date;
+                duration:
+                  | string
+                  | number
+                  | bigint
+                  | boolean
+                  | ReactElement<unknown, string | JSXElementConstructor<any>>
+                  | Iterable<ReactNode>
+                  | ReactPortal
+                  | Promise<
+                      | string
+                      | number
+                      | bigint
+                      | boolean
+                      | ReactPortal
+                      | ReactElement<unknown, string | JSXElementConstructor<any>>
+                      | Iterable<ReactNode>
+                      | null
+                      | undefined
+                    >
+                  | null
+                  | undefined;
+                totalAmount: {
+                  toLocaleString: () =>
+                    | string
+                    | number
+                    | bigint
+                    | boolean
+                    | ReactElement<unknown, string | JSXElementConstructor<any>>
+                    | Iterable<ReactNode>
+                    | ReactPortal
+                    | Promise<
+                        | string
+                        | number
+                        | bigint
+                        | boolean
+                        | ReactPortal
+                        | ReactElement<unknown, string | JSXElementConstructor<any>>
+                        | Iterable<ReactNode>
+                        | null
+                        | undefined
+                      >
+                    | null
+                    | undefined;
+                };
+                requestDate: string | number | Date;
+              }) => (
+                <Card key={booking.id} className='overflow-hidden'>
+                  <CardContent className='p-6'>
+                    <div className='flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4'>
+                      {/* Listing Info */}
+                      <div className='flex gap-4'>
+                        <img
+                          src={booking.listing.images[0] || '/images/placeholder-room.jpg'}
+                          alt={
+                            typeof booking.listing.title === 'string'
+                              ? booking.listing.title
+                              : String(booking.listing.title ?? 'Room Image')
+                          }
+                          className='w-20 h-20 rounded-lg object-cover'
+                        />
+                        <div className='flex-1'>
+                          <h3 className='font-semibold text-gray-900 mb-1'>
+                            {booking.listing.title}
+                          </h3>
+                          <div className='flex items-center text-gray-600 mb-2'>
+                            <MapPin className='h-4 w-4 mr-1' />
+                            <span className='text-sm'>{booking.listing.location}</span>
+                          </div>
+                          <div className='flex items-center text-gray-600'>
+                            <User className='h-4 w-4 mr-1' />
+                            <span className='text-sm'>Provider: {booking.provider.name}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Booking Details */}
+                      <div className='flex flex-col lg:items-end gap-2'>
+                        <div className='flex gap-2'>
+                          <Badge
+                            className={statusColors[booking.status as keyof typeof statusColors]}
+                          >
+                            {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                          </Badge>
+                          <Badge
+                            className={
+                              paymentStatusColors[
+                                booking.paymentStatus as keyof typeof paymentStatusColors
+                              ] || 'bg-gray-100 text-gray-800'
+                            }
+                          >
+                            {booking.paymentStatus.charAt(0).toUpperCase() +
+                              booking.paymentStatus.slice(1)}
+                          </Badge>
+                        </div>
+
+                        <div className='flex items-center text-gray-600 text-sm'>
+                          <Calendar className='h-4 w-4 mr-1' />
+                          <span>Move-in: {new Date(booking.moveInDate).toLocaleDateString()}</span>
+                        </div>
+
+                        <div className='flex items-center text-gray-600 text-sm'>
+                          <Clock className='h-4 w-4 mr-1' />
+                          <span>Duration: {booking.duration} months</span>
+                        </div>
+
+                        <div className='flex items-center text-gray-900 font-semibold'>
+                          <CreditCard className='h-4 w-4 mr-1' />
+                          <span>₹{booking.totalAmount.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className='flex flex-col gap-2 lg:min-w-[120px]'>
                         <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => cancelBooking(booking.id)}
+                          size='sm'
+                          variant='outline'
+                          onClick={() =>
+                            (window.location.href = `/messages?provider=${booking.provider.id}`)
+                          }
                         >
-                          Cancel
+                          <MessageCircle className='h-4 w-4 mr-1' />
+                          Message
                         </Button>
-                      )}
-                      
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => window.location.href = `/bookings/${booking.id}`}
-                      >
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
 
-                  {/* Request Date */}
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-600">
-                      Requested on {new Date(booking.requestDate).toLocaleDateString()}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        {booking.status === 'pending' &&
+                          typeof booking.id === 'string' &&
+                          booking.id && (
+                            <Button
+                              size='sm'
+                              variant='destructive'
+                              onClick={() => cancelBooking(booking.id as string)}
+                            >
+                              Cancel
+                            </Button>
+                          )}
+
+                        <Button
+                          size='sm'
+                          variant='ghost'
+                          onClick={() => (window.location.href = `/bookings/${booking.id}`)}
+                        >
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Request Date */}
+                    <div className='mt-4 pt-4 border-t border-gray-100'>
+                      <p className='text-sm text-gray-600'>
+                        Requested on {new Date(booking.requestDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            )}
           </div>
         )}
       </div>

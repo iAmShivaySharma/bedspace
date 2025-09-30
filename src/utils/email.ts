@@ -140,7 +140,7 @@ export const sendBookingNotificationEmail = async (
 ): Promise<boolean> => {
   const statusText = status === 'approved' ? 'Approved' : 'Rejected';
   const statusColor = status === 'approved' ? '#10b981' : '#ef4444';
-  
+
   const html = `
     <!DOCTYPE html>
     <html>
@@ -164,9 +164,10 @@ export const sendBookingNotificationEmail = async (
         <div class="content">
           <h2>Hello ${name}!</h2>
           <p>Your booking request for "<strong>${listingTitle}</strong>" has been <span class="status">${statusText.toLowerCase()}</span>.</p>
-          ${status === 'approved' 
-            ? '<p>Congratulations! You can now proceed with the next steps. The provider will contact you soon with further details.</p>'
-            : '<p>Unfortunately, your booking request was not approved this time. Don\'t worry, there are many other great options available on BedSpace.</p>'
+          ${
+            status === 'approved'
+              ? '<p>Congratulations! You can now proceed with the next steps. The provider will contact you soon with further details.</p>'
+              : "<p>Unfortunately, your booking request was not approved this time. Don't worry, there are many other great options available on BedSpace.</p>"
           }
           <p>You can view more details by logging into your BedSpace account.</p>
           <p>Best regards,<br>The BedSpace Team</p>

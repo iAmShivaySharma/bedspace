@@ -18,10 +18,7 @@ export async function POST(
     }
 
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     await connectDB();
@@ -31,10 +28,7 @@ export async function POST(
     // Find the target user
     const targetUser = await User.findById(userId);
     if (!targetUser) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
     // Prevent admin from deactivating themselves
@@ -65,10 +59,7 @@ export async function POST(
         break;
 
       default:
-        return NextResponse.json(
-          { success: false, error: 'Invalid action' },
-          { status: 400 }
-        );
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
 
     // Update user if there's data to update
@@ -81,9 +72,8 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message
+      message,
     });
-
   } catch (error) {
     console.error('User action error:', error);
     return NextResponse.json(

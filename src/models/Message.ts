@@ -24,80 +24,99 @@ export interface IConversation extends Document {
   lastMessage?: mongoose.Types.ObjectId;
   lastMessageAt: Date;
   isActive: boolean;
+  listingId?: mongoose.Types.ObjectId; // Associated listing if chat is about a specific property
+  listingTitle?: string; // Cached listing title for quick reference
   createdAt: Date;
   updatedAt: Date;
 }
 
-const MessageSchema = new Schema<IMessage>({
-  conversationId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Conversation',
-    required: true,
-    index: true,
+const MessageSchema = new Schema<IMessage>(
+  {
+    conversationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Conversation',
+      required: true,
+      index: true,
+    },
+    senderId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    receiverId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
+    content: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 1000,
+    },
+    messageType: {
+      type: String,
+      enum: Object.values(MESSAGE_TYPES),
+      default: MESSAGE_TYPES.TEXT,
+    },
+    fileUrl: String,
+    fileName: String,
+    isRead: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    readAt: Date,
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedAt: Date,
   },
-  senderId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true,
-  },
-  receiverId: {
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-    index: true,
-  },
-  content: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 1000,
-  },
-  messageType: {
-    type: String,
-    enum: Object.values(MESSAGE_TYPES),
-    default: MESSAGE_TYPES.TEXT,
-  },
-  fileUrl: String,
-  fileName: String,
-  isRead: {
-    type: Boolean,
-    default: false,
-    index: true,
-  },
-  readAt: Date,
-  isDeleted: {
-    type: Boolean,
-    default: false,
-  },
-  deletedAt: Date,
-}, {
-  timestamps: true,
-});
+  {
+    timestamps: true,
+  }
+);
 
-const ConversationSchema = new Schema<IConversation>({
-  participants: [{
-    type: Schema.Types.ObjectId,
-    ref: 'User',
-    required: true,
-  }],
-  lastMessage: {
-    type: Schema.Types.ObjectId,
-    ref: 'Message',
+const ConversationSchema = new Schema<IConversation>(
+  {
+    participants: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+      },
+    ],
+    lastMessage: {
+      type: Schema.Types.ObjectId,
+      ref: 'Message',
+    },
+    lastMessageAt: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    listingId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Listing',
+      index: true,
+    },
+    listingTitle: {
+      type: String,
+      trim: true,
+    },
   },
-  lastMessageAt: {
-    type: Date,
-    default: Date.now,
-    index: true,
-  },
-  isActive: {
-    type: Boolean,
-    default: true,
-    index: true,
-  },
-}, {
-  timestamps: true,
-});
+  {
+    timestamps: true,
+  }
+);
 
 // Indexes for better query performance
 MessageSchema.index({ conversationId: 1, createdAt: -1 });
@@ -112,20 +131,20 @@ ConversationSchema.index({ isActive: 1, lastMessageAt: -1 });
 // Ensure participants array has exactly 2 elements and they are unique
 ConversationSchema.index(
   { participants: 1 },
-  { 
+  {
     unique: true,
-    partialFilterExpression: { isActive: true }
+    partialFilterExpression: { isActive: true },
   }
 );
 
 // Virtual for unread message count
-ConversationSchema.virtual('unreadCount').get(function() {
+ConversationSchema.virtual('unreadCount').get(function () {
   // This will be populated by aggregation in queries
   return (this as any)._unreadCount || 0;
 });
 
 // Method to mark message as read
-MessageSchema.methods.markAsRead = function() {
+MessageSchema.methods.markAsRead = function () {
   if (!this.isRead) {
     this.isRead = true;
     this.readAt = new Date();
@@ -135,33 +154,59 @@ MessageSchema.methods.markAsRead = function() {
 };
 
 // Method to soft delete message
-MessageSchema.methods.softDelete = function() {
+MessageSchema.methods.softDelete = function () {
   this.isDeleted = true;
   this.deletedAt = new Date();
   return this.save();
 };
 
 // Static method to find or create conversation
-ConversationSchema.statics.findOrCreate = async function(participant1: string, participant2: string) {
+ConversationSchema.statics.findOrCreate = async function (
+  participant1: string,
+  participant2: string,
+  listingId?: string,
+  listingTitle?: string
+) {
   const participants = [participant1, participant2].sort(); // Sort to ensure consistent order
-  
-  let conversation = await this.findOne({
+
+  // Search criteria - include listingId if provided for listing-specific conversations
+  const searchCriteria: any = {
     participants: { $all: participants, $size: 2 },
     isActive: true,
-  });
+  };
+
+  if (listingId) {
+    searchCriteria.listingId = listingId;
+  } else {
+    // For general conversations, ensure no listingId is set
+    searchCriteria.listingId = { $exists: false };
+  }
+
+  let conversation = await this.findOne(searchCriteria);
 
   if (!conversation) {
-    conversation = await this.create({
+    const conversationData: any = {
       participants,
       lastMessageAt: new Date(),
-    });
+    };
+
+    if (listingId) {
+      conversationData.listingId = listingId;
+      conversationData.listingTitle = listingTitle;
+    }
+
+    conversation = await this.create(conversationData);
   }
 
   return conversation;
 };
 
 // Static method to get conversations for a user with unread counts
-ConversationSchema.statics.getUserConversations = function(userId: string, page: number = 1, limit: number = 20) {
+ConversationSchema.statics.getUserConversations = function (
+  userId: string,
+  page: number = 1,
+  limit: number = 20
+) {
   const skip = (page - 1) * limit;
 
   return this.aggregate([
@@ -189,6 +234,7 @@ ConversationSchema.statics.getUserConversations = function(userId: string, page:
     },
     {
       $addFields: {
+        messageCount: { $size: '$messages' },
         unreadCount: {
           $size: {
             $filter: {
@@ -203,17 +249,6 @@ ConversationSchema.statics.getUserConversations = function(userId: string, page:
             },
           },
         },
-        otherParticipant: {
-          $arrayElemAt: [
-            {
-              $filter: {
-                input: '$participantDetails',
-                cond: { $ne: ['$$this._id', new mongoose.Types.ObjectId(userId)] },
-              },
-            },
-            0,
-          ],
-        },
       },
     },
     {
@@ -226,34 +261,32 @@ ConversationSchema.statics.getUserConversations = function(userId: string, page:
     },
     {
       $addFields: {
-        lastMessageDetails: { $arrayElemAt: ['$lastMessageDetails', 0] },
+        lastMessage: { $arrayElemAt: ['$lastMessageDetails', 0] },
+        lastActivity: { $ifNull: ['$lastMessageAt', '$updatedAt'] },
       },
     },
     {
       $project: {
         _id: 1,
-        participants: 1,
-        lastMessageAt: 1,
+        participants: '$participantDetails',
+        lastMessage: 1,
+        lastActivity: 1,
+        messageCount: 1,
         unreadCount: 1,
-        otherParticipant: {
-          _id: 1,
-          name: 1,
-          avatar: 1,
-          role: 1,
-        },
-        lastMessage: '$lastMessageDetails',
+        listingId: 1,
+        listingTitle: 1,
         createdAt: 1,
         updatedAt: 1,
       },
     },
-    { $sort: { lastMessageAt: -1 } },
+    { $sort: { lastActivity: -1 } },
     { $skip: skip },
     { $limit: limit },
   ]);
 };
 
 // Static method to mark all messages in conversation as read
-MessageSchema.statics.markConversationAsRead = function(conversationId: string, userId: string) {
+MessageSchema.statics.markConversationAsRead = function (conversationId: string, userId: string) {
   return this.updateMany(
     {
       conversationId: new mongoose.Types.ObjectId(conversationId),
@@ -270,7 +303,7 @@ MessageSchema.statics.markConversationAsRead = function(conversationId: string, 
 };
 
 // Pre-save middleware to update conversation's lastMessage and lastMessageAt
-MessageSchema.pre('save', async function(next) {
+MessageSchema.pre('save', async function (next) {
   if (this.isNew) {
     try {
       const Conversation = mongoose.model('Conversation');
@@ -286,6 +319,7 @@ MessageSchema.pre('save', async function(next) {
 });
 
 const Message = mongoose.models.Message || mongoose.model<IMessage>('Message', MessageSchema);
-const Conversation = mongoose.models.Conversation || mongoose.model<IConversation>('Conversation', ConversationSchema);
+const Conversation =
+  mongoose.models.Conversation || mongoose.model<IConversation>('Conversation', ConversationSchema);
 
 export { Message, Conversation };

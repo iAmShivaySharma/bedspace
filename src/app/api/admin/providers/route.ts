@@ -16,10 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -59,13 +56,9 @@ export async function GET(request: NextRequest) {
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error('Get providers error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to get providers' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to get providers' }, { status: 500 });
   }
 }
 
@@ -82,10 +75,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -99,10 +89,7 @@ export async function PUT(request: NextRequest) {
     }
 
     if (!['approved', 'rejected', 'pending'].includes(status)) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid status' },
-        { status: 400 }
-      );
+      return NextResponse.json({ success: false, error: 'Invalid status' }, { status: 400 });
     }
 
     if (status === 'rejected' && !rejectionReason) {
@@ -116,15 +103,12 @@ export async function PUT(request: NextRequest) {
     const provider = await Provider.findById(providerId);
 
     if (!provider) {
-      return NextResponse.json(
-        { success: false, error: 'Provider not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ success: false, error: 'Provider not found' }, { status: 404 });
     }
 
     // Update verification status
     provider.verificationStatus = status;
-    
+
     if (status === 'approved') {
       provider.verifiedAt = new Date();
       provider.rejectionReason = undefined;
@@ -167,7 +151,6 @@ export async function PUT(request: NextRequest) {
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error('Update provider status error:', error);
     return NextResponse.json(

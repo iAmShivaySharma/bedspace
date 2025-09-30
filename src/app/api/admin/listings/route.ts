@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticate } from '@/middleware/auth';
 import connectDB from '@/lib/mongodb';
-import { User } from '@/models/User';
+import { Listing } from '@/models/Listing';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,10 +15,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
     await connectDB();
@@ -27,132 +24,106 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all';
     const type = searchParams.get('type') || 'all';
     const search = searchParams.get('search') || '';
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
 
-    // Get real providers from database
-    const providers = await User.find({ role: 'provider' }).select('name email verificationStatus').limit(20);
+    // Build query for real listings
+    const query: any = {};
 
-    if (providers.length === 0) {
-      return NextResponse.json({
-        success: true,
-        data: []
-      });
-    }
-
-    // Generate realistic listings based on actual providers
-    const locations = [
-      'Bandra West, Mumbai',
-      'Andheri East, Mumbai',
-      'Powai, Mumbai',
-      'Thane West, Mumbai',
-      'Worli, Mumbai',
-      'Malad West, Mumbai',
-      'Goregaon East, Mumbai',
-      'Kandivali West, Mumbai',
-      'Juhu, Mumbai',
-      'Santacruz East, Mumbai'
-    ];
-
-    const titleTemplates = [
-      'Modern Private Room',
-      'Cozy Shared Space',
-      'Luxury Studio',
-      'Budget Friendly Room',
-      'Spacious Private Room',
-      'Furnished Accommodation',
-      'Premium Studio',
-      'Comfortable Single Room',
-      'Executive Room',
-      'Student Friendly Space'
-    ];
-
-    const types = ['private_room', 'shared_room', 'entire_place'];
-    const statuses = ['active', 'pending', 'inactive', 'rejected'];
-    const amenitiesList = [
-      ['wifi', 'ac', 'kitchen', 'laundry'],
-      ['wifi', 'parking', 'security', 'gym'],
-      ['pool', 'gym', 'parking', 'wifi'],
-      ['kitchen', 'laundry', 'wifi', 'ac'],
-      ['security', 'parking', 'wifi', 'balcony'],
-      ['wifi', 'ac', 'furnished', 'cleaning'],
-      ['metro', 'wifi', 'kitchen', 'security']
-    ];
-
-    // Create listings based on real providers (2-3 listings per provider)
-    const mockListings: any[] = [];
-    providers.forEach((provider, providerIndex) => {
-      const listingsPerProvider = Math.floor(Math.random() * 3) + 1; // 1-3 listings per provider
-
-      for (let i = 0; i < listingsPerProvider; i++) {
-        const listingIndex = providerIndex * 3 + i;
-        const listingType = types[Math.floor(Math.random() * types.length)];
-
-        // Provider verification status affects listing status
-        let listingStatus;
-        const providerData = provider as any; // Type assertion for verificationStatus
-        if (providerData.verificationStatus === 'approved') {
-          listingStatus = statuses[Math.floor(Math.random() * 2)]; // active or pending
-        } else if (providerData.verificationStatus === 'pending') {
-          listingStatus = 'pending';
-        } else {
-          listingStatus = statuses[Math.floor(Math.random() * statuses.length)];
-        }
-
-        const basePrice = listingType === 'entire_place' ? 15000 :
-                         listingType === 'private_room' ? 10000 : 7000;
-
-        mockListings.push({
-          _id: `listing-${listingIndex + 1}`,
-          title: `${titleTemplates[listingIndex % titleTemplates.length]} ${listingType === 'entire_place' ? 'Apartment' : listingType === 'private_room' ? 'with AC' : 'Near Metro'}`,
-          description: `A comfortable and well-furnished ${listingType.replace('_', ' ')} perfect for professionals and students. Located in prime area with easy access to transportation.`,
-          location: locations[listingIndex % locations.length],
-          price: basePrice + Math.floor(Math.random() * 8000), // Realistic pricing
-          provider: {
-            _id: provider._id,
-            name: provider.name,
-            email: provider.email
-          },
-          status: listingStatus,
-          type: listingType,
-          amenities: amenitiesList[listingIndex % amenitiesList.length],
-          images: [`/images/listing-${(listingIndex % 5) + 1}.jpg`],
-          rating: (3.8 + Math.random() * 1.2).toFixed(1), // 3.8-5.0 rating
-          reviewCount: Math.floor(Math.random() * 30) + 3,
-          createdAt: new Date(Date.now() - Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString(), // Last 60 days
-          updatedAt: new Date(Date.now() - Math.random() * 14 * 24 * 60 * 60 * 1000).toISOString() // Last 14 days
-        });
-      }
-    });
-
-    // Apply filters
-    let filteredListings = mockListings;
-
+    // Filter by status (map from frontend status to database fields)
     if (status !== 'all') {
-      filteredListings = filteredListings.filter(listing => listing.status === status);
+      switch (status) {
+        case 'active':
+          query.isActive = true;
+          query.isApproved = true;
+          break;
+        case 'pending':
+          query.isApproved = false;
+          break;
+        case 'inactive':
+          query.isActive = false;
+          break;
+        case 'rejected':
+          query.isApproved = false;
+          query.rejectionReason = { $exists: true };
+          break;
+      }
     }
 
+    // Filter by room type
     if (type !== 'all') {
-      filteredListings = filteredListings.filter(listing => listing.type === type);
+      query.roomType = type;
     }
 
+    // Search functionality
     if (search) {
-      const searchLower = search.toLowerCase();
-      filteredListings = filteredListings.filter(listing =>
-        listing.title.toLowerCase().includes(searchLower) ||
-        listing.location.toLowerCase().includes(searchLower) ||
-        listing.provider.name.toLowerCase().includes(searchLower)
-      );
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { city: { $regex: search, $options: 'i' } },
+        { address: { $regex: search, $options: 'i' } },
+      ];
     }
+
+    // Get real listings from database
+    const listings = await Listing.find(query)
+      .populate('providerId', 'name email verificationStatus')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip((page - 1) * limit);
+
+    const totalListings = await Listing.countDocuments(query);
+
+    // Transform data to match admin panel format
+    const transformedListings = listings.map(listing => {
+      const provider = listing.providerId as any; // Cast to any to access populated fields
+      return {
+        _id: listing._id,
+        title: listing.title,
+        description: listing.description,
+        location: `${listing.address}, ${listing.city}`,
+        price: listing.rent,
+        provider: {
+          _id: provider._id,
+          name: provider.name,
+          email: provider.email,
+        },
+        // Map database status to frontend status
+        status: (() => {
+          if (listing.rejectionReason) return 'rejected';
+          if (!listing.isApproved) return 'pending';
+          if (!listing.isActive) return 'inactive';
+          return 'active';
+        })(),
+        isApproved: listing.isApproved,
+        isActive: listing.isActive,
+        type:
+          listing.roomType === 'single'
+            ? 'private_room'
+            : listing.roomType === 'shared'
+              ? 'shared_room'
+              : 'entire_place',
+        amenities: listing.facilities || [],
+        images: listing.images?.map((img: any) => img.fileUrl) || [],
+        rating: (4.0 + Math.random()).toFixed(1), // Placeholder rating
+        reviewCount: Math.floor(Math.random() * 20) + 1, // Placeholder review count
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+      };
+    });
 
     return NextResponse.json({
       success: true,
-      data: filteredListings
+      data: transformedListings,
+      pagination: {
+        page,
+        limit,
+        total: totalListings,
+        pages: Math.ceil(totalListings / limit),
+      },
     });
-
   } catch (error) {
     console.error('Get listings error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to get listings' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to get listings' }, { status: 500 });
   }
 }

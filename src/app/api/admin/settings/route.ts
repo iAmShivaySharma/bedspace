@@ -16,7 +16,8 @@ const DEFAULT_SETTINGS = {
   booking: {
     maxBookingDuration: 365, // days
     minBookingDuration: 1, // days
-    cancellationPolicy: 'Free cancellation up to 24 hours before check-in. After that, 50% refund for cancellations made up to 7 days before check-in.',
+    cancellationPolicy:
+      'Free cancellation up to 24 hours before check-in. After that, 50% refund for cancellations made up to 7 days before check-in.',
     autoApprovalEnabled: false,
     bookingFee: 5.0, // percentage
   },
@@ -37,20 +38,25 @@ const DEFAULT_SETTINGS = {
     maxLoginAttempts: 5,
     twoFactorRequired: false,
   },
+  localization: {
+    defaultCurrency: 'INR',
+    currencySymbol: '₹',
+    defaultTimezone: 'Asia/Kolkata',
+    dateFormat: 'DD/MM/YYYY',
+    timeFormat: '12',
+    supportedCurrencies: ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'JPY'],
+  },
 };
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // Verify admin authentication
     const authResult = await verifyAuth(request);
     if (!authResult.success || authResult.user?.role !== 'admin') {
       logApiRequest('GET', '/api/admin/settings', authResult.user?.id, 401, Date.now() - startTime);
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 401 });
     }
 
     await connectDB();
@@ -63,44 +69,44 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: settings
+      data: settings,
+    });
+  } catch (error) {
+    logError('Get settings error', error, {
+      url: request.url,
+      method: 'GET',
     });
 
-  } catch (error) {
-    logError('Get settings error', error, { 
-      url: request.url,
-      method: 'GET'
-    });
-    
     logApiRequest('GET', '/api/admin/settings', undefined, 500, Date.now() - startTime);
-    
-    return NextResponse.json(
-      { success: false, error: 'Failed to get settings' },
-      { status: 500 }
-    );
+
+    return NextResponse.json({ success: false, error: 'Failed to get settings' }, { status: 500 });
   }
 }
 
 export async function PUT(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // Verify admin authentication
     const authResult = await verifyAuth(request);
     if (!authResult.success || authResult.user?.role !== 'admin') {
       logApiRequest('PUT', '/api/admin/settings', authResult.user?.id, 401, Date.now() - startTime);
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 401 }
-      );
+      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 401 });
     }
 
     await connectDB();
 
     const body = await request.json();
-    
+
     // Validate settings structure
-    const requiredSections = ['general', 'booking', 'verification', 'notifications', 'security'];
+    const requiredSections = [
+      'general',
+      'booking',
+      'verification',
+      'notifications',
+      'security',
+      'localization',
+    ];
     for (const section of requiredSections) {
       if (!body[section]) {
         return NextResponse.json(
@@ -132,32 +138,47 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Validate localization settings
+    if (!body.localization.defaultCurrency) {
+      return NextResponse.json(
+        { success: false, error: 'Default currency is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.localization.currencySymbol) {
+      return NextResponse.json(
+        { success: false, error: 'Currency symbol is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.localization.defaultTimezone) {
+      return NextResponse.json(
+        { success: false, error: 'Default timezone is required' },
+        { status: 400 }
+      );
+    }
+
     // In production, save to Settings collection
     // For now, just log the activity
-    await logAdminActivity(
-      authResult.user.id,
-      'settings_update',
-      undefined,
-      undefined,
-      request
-    );
+    await logAdminActivity(authResult.user.id, 'settings_update', undefined, undefined, request);
 
     logApiRequest('PUT', '/api/admin/settings', authResult.user.id, 200, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
       message: 'Settings updated successfully',
-      data: body
+      data: body,
+    });
+  } catch (error) {
+    logError('Update settings error', error, {
+      url: request.url,
+      method: 'PUT',
     });
 
-  } catch (error) {
-    logError('Update settings error', error, { 
-      url: request.url,
-      method: 'PUT'
-    });
-    
     logApiRequest('PUT', '/api/admin/settings', undefined, 500, Date.now() - startTime);
-    
+
     return NextResponse.json(
       { success: false, error: 'Failed to update settings' },
       { status: 500 }
