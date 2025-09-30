@@ -25,18 +25,10 @@ export async function GET(request: NextRequest) {
 
     console.log('Pagination params:', { page, limit, limitParam });
 
-    // Get user conversations directly using find instead of aggregation
+    // Use the model's built-in method to get user conversations with proper filtering
     console.log('Fetching conversations for user:', user.id);
 
-    const conversations = await Conversation.find({
-      participants: user.id,
-      isActive: true,
-    })
-      .populate('participants', 'name avatar role email')
-      .populate('lastMessage')
-      .sort({ lastMessageAt: -1, updatedAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    const conversations = await (Conversation as any).getUserConversations(user.id, page, limit);
 
     console.log('Found conversations:', conversations.length);
 
@@ -54,82 +46,52 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform conversations to match expected format
-    const transformedConversations = await Promise.all(
-      conversations.map(async (conversation: any) => {
-        console.log('Processing conversation:', conversation._id);
+    const transformedConversations = conversations.map((conversation: any) => {
+      console.log('Processing conversation:', conversation._id);
 
-        // Get the other participant (not the current user)
-        const otherParticipant = conversation.participants?.find(
-          (p: any) => p._id.toString() !== user.id
-        );
+      // Get the other participant (not the current user)
+      const otherParticipant = conversation.participants?.find(
+        (p: any) => p._id.toString() !== user.id
+      );
 
-        if (!otherParticipant) {
-          console.log('No other participant found, skipping conversation:', conversation._id);
-          return null;
-        }
+      if (!otherParticipant) {
+        console.log('No other participant found, skipping conversation:', conversation._id);
+        return null;
+      }
 
-        // Get unread count for this conversation
-        const unreadCount = await Message.countDocuments({
-          conversationId: conversation._id,
-          receiverId: user.id,
-          isRead: false,
-        });
-
-        // Get recent messages for this conversation (last 5)
-        const recentMessages = await Message.find({
-          conversationId: conversation._id,
-        })
-          .populate('senderId', 'name avatar')
-          .sort({ createdAt: -1 })
-          .limit(5);
-
-        return {
-          id: conversation._id,
-          participant: {
-            id: otherParticipant._id,
-            name: otherParticipant.name,
-            avatar: otherParticipant.avatar || '/images/default-avatar.png',
-            role: otherParticipant.role,
-            email: otherParticipant.email,
-          },
-          lastMessage: conversation.lastMessage
-            ? {
-                content: conversation.lastMessage.content,
-                createdAt: conversation.lastMessage.createdAt.toISOString(),
-                senderId: conversation.lastMessage.senderId.toString(),
-                type: conversation.lastMessage.type || 'text',
-              }
-            : null,
-          unreadCount,
-          messageCount: conversation.messageCount || 0,
-          createdAt: conversation.createdAt.toISOString(),
-          lastActivity: (conversation.lastMessageAt || conversation.updatedAt).toISOString(),
-          listing: conversation.listingId
-            ? {
-                id: conversation.listingId,
-                title: conversation.listingTitle,
-              }
-            : null,
-          messages: recentMessages.reverse().map((message: any) => ({
-            id: message._id,
-            content: message.content,
-            senderId: message.senderId._id.toString(),
-            receiverId: message.receiverId.toString(),
-            type: message.type,
-            isRead: message.isRead,
-            createdAt: message.createdAt.toISOString(),
-            sender: {
-              id: message.senderId._id,
-              name: message.senderId.name,
-              avatar: message.senderId.avatar,
-            },
-          })),
-        };
-      })
-    );
+      return {
+        id: conversation._id,
+        participant: {
+          id: otherParticipant._id,
+          name: otherParticipant.name,
+          avatar: otherParticipant.avatar || '/images/default-avatar.png',
+          role: otherParticipant.role,
+          email: otherParticipant.email,
+        },
+        lastMessage: conversation.lastMessage
+          ? {
+              content: conversation.lastMessage.content,
+              createdAt: conversation.lastMessage.createdAt.toISOString(),
+              senderId: conversation.lastMessage.senderId.toString(),
+              type: conversation.lastMessage.type || 'text',
+            }
+          : null,
+        unreadCount: conversation.unreadCount || 0,
+        messageCount: conversation.messageCount || 0,
+        createdAt: conversation.createdAt.toISOString(),
+        lastActivity: conversation.lastActivity.toISOString(),
+        listing: conversation.listingId
+          ? {
+              id: conversation.listingId,
+              title: conversation.listingTitle,
+            }
+          : null,
+        messages: [], // Remove messages array as it's not needed and causes extra data transfer
+      };
+    });
 
     // Filter out null results from failed processing
-    const validConversations = transformedConversations.filter(conv => conv !== null);
+    const validConversations = transformedConversations.filter((conv: any) => conv !== null);
 
     logApiRequest('GET', '/api/messages/conversations', user.id, 200, Date.now() - startTime);
 

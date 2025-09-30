@@ -1,133 +1,226 @@
-import { useEffect, useRef, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { useAppSelector } from '@/lib/store/hooks';
+// hooks/useSocket.ts
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { socketManager } from '@/lib/socketManager';
 
-interface UseSocketOptions {
-  autoConnect?: boolean;
+interface UseSocketProps {
+  roomId?: string;
+  onNewMessage?: (message: any) => void;
+  onUserTyping?: (data: { userName: string }) => void;
+  onUserStoppedTyping?: (data: { userName: string }) => void;
+  onUserStatusUpdated?: (data: { userId: string; status: string }) => void;
 }
 
-interface SocketState {
-  connected: boolean;
-  connecting: boolean;
-  error: string | null;
-}
+export const useSocket = ({
+  roomId,
+  onNewMessage,
+  onUserTyping,
+  onUserStoppedTyping,
+  onUserStatusUpdated,
+}: UseSocketProps) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const subscriberIdRef = useRef(`subscriber_${Math.random().toString(36).substr(2, 9)}`);
 
-export const useSocket = (options: UseSocketOptions = {}) => {
-  const { autoConnect = true } = options;
-  const { user, isAuthenticated } = useAppSelector(state => state.auth);
-  const socketRef = useRef<Socket | null>(null);
-  const [socketState, setSocketState] = useState<SocketState>({
-    connected: false,
-    connecting: false,
-    error: null,
+  // Use refs to store stable references to callback functions
+  const handlersRef = useRef({
+    onNewMessage,
+    onUserTyping,
+    onUserStoppedTyping,
+    onUserStatusUpdated,
   });
 
-  // Get token from cookies (as used in the auth middleware)
-  const getToken = () => {
-    if (typeof window !== 'undefined' && document.cookie) {
-      const cookies = document.cookie.split(';');
-      const authCookie = cookies.find(cookie => cookie.trim().startsWith('auth-token='));
-      return authCookie ? authCookie.split('=')[1] : null;
-    }
-    return null;
-  };
-
-  const connect = () => {
-    const token = getToken();
-    if (!token || socketRef.current?.connected) return;
-
-    setSocketState(prev => ({ ...prev, connecting: true, error: null }));
-
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3000', {
-      auth: { token },
-      autoConnect: false,
-    });
-
-    socket.on('connect', () => {
-      console.log('Socket connected:', socket.id);
-      setSocketState({
-        connected: true,
-        connecting: false,
-        error: null,
-      });
-    });
-
-    socket.on('disconnect', reason => {
-      console.log('Socket disconnected:', reason);
-      setSocketState(prev => ({
-        ...prev,
-        connected: false,
-        connecting: false,
-      }));
-    });
-
-    socket.on('connect_error', error => {
-      console.error('Socket connection error:', error);
-      setSocketState({
-        connected: false,
-        connecting: false,
-        error: error.message,
-      });
-    });
-
-    socket.on('error', error => {
-      console.error('Socket error:', error);
-      setSocketState(prev => ({
-        ...prev,
-        error: error.message,
-      }));
-    });
-
-    socketRef.current = socket;
-    socket.connect();
-  };
-
-  const disconnect = () => {
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-  };
-
-  const emit = (event: string, data?: any) => {
-    if (socketRef.current?.connected) {
-      socketRef.current.emit(event, data);
-    }
-  };
-
-  const on = (event: string, callback: (...args: any[]) => void) => {
-    if (socketRef.current) {
-      socketRef.current.on(event, callback);
-    }
-  };
-
-  const off = (event: string, callback?: (...args: any[]) => void) => {
-    if (socketRef.current) {
-      if (callback) {
-        socketRef.current.off(event, callback);
-      } else {
-        socketRef.current.removeAllListeners(event);
-      }
-    }
-  };
-
+  // Update refs when callbacks change
   useEffect(() => {
-    if (autoConnect && user && isAuthenticated) {
-      connect();
-    }
+    handlersRef.current = {
+      onNewMessage,
+      onUserTyping,
+      onUserStoppedTyping,
+      onUserStatusUpdated,
+    };
+  }, [onNewMessage, onUserTyping, onUserStoppedTyping, onUserStatusUpdated]);
+
+  // Connection status tracking
+  useEffect(() => {
+    let statusInterval: NodeJS.Timeout;
+
+    const updateConnectionStatus = () => {
+      const connected = socketManager.isConnected();
+      setIsConnected(connected);
+    };
+
+    // Initial status check
+    updateConnectionStatus();
+
+    // Check status periodically
+    statusInterval = setInterval(updateConnectionStatus, 1000);
 
     return () => {
-      disconnect();
+      clearInterval(statusInterval);
     };
-  }, [user, isAuthenticated, autoConnect]);
+  }, []);
+
+  // Room and event management
+  useEffect(() => {
+    const subscriberId = subscriberIdRef.current;
+
+    const setupSocketHandlers = async () => {
+      try {
+        // Join room if provided
+        if (roomId) {
+          await socketManager.joinRoom(roomId, subscriberId);
+        }
+
+        // Register event handlers
+        if (handlersRef.current.onNewMessage) {
+          await socketManager.on('new-message', handlersRef.current.onNewMessage, subscriberId);
+        }
+
+        if (handlersRef.current.onUserTyping) {
+          await socketManager.on('user-typing', handlersRef.current.onUserTyping, subscriberId);
+        }
+
+        if (handlersRef.current.onUserStoppedTyping) {
+          await socketManager.on(
+            'user-stopped-typing',
+            handlersRef.current.onUserStoppedTyping,
+            subscriberId
+          );
+        }
+
+        if (handlersRef.current.onUserStatusUpdated) {
+          await socketManager.on(
+            'user-status-updated',
+            handlersRef.current.onUserStatusUpdated,
+            subscriberId
+          );
+        }
+
+        // Connection events
+        await socketManager.on(
+          'connect',
+          () => {
+            console.log('useSocket: Connected to server');
+            setIsConnected(true);
+            setReconnectAttempts(0);
+          },
+          subscriberId
+        );
+
+        await socketManager.on(
+          'disconnect',
+          () => {
+            console.log('useSocket: Disconnected from server');
+            setIsConnected(false);
+          },
+          subscriberId
+        );
+
+        await socketManager.on(
+          'reconnect_attempt',
+          (attemptNumber: number) => {
+            console.log('useSocket: Reconnection attempt:', attemptNumber);
+            setReconnectAttempts(attemptNumber);
+          },
+          subscriberId
+        );
+      } catch (error) {
+        console.error('useSocket: Failed to setup handlers:', error);
+      }
+    };
+
+    setupSocketHandlers();
+
+    // Cleanup
+    return () => {
+      console.log('useSocket: Cleaning up for roomId:', roomId);
+
+      if (roomId) {
+        socketManager.leaveRoom(roomId, subscriberId);
+      }
+
+      // Remove event handlers
+      if (handlersRef.current.onNewMessage) {
+        socketManager.off('new-message', handlersRef.current.onNewMessage);
+      }
+      if (handlersRef.current.onUserTyping) {
+        socketManager.off('user-typing', handlersRef.current.onUserTyping);
+      }
+      if (handlersRef.current.onUserStoppedTyping) {
+        socketManager.off('user-stopped-typing', handlersRef.current.onUserStoppedTyping);
+      }
+      if (handlersRef.current.onUserStatusUpdated) {
+        socketManager.off('user-status-updated', handlersRef.current.onUserStatusUpdated);
+      }
+    };
+  }, [roomId]); // Only depend on roomId
+
+  // Helper functions for emitting events
+  const sendMessage = useCallback(
+    async (message: any, senderId: string, senderName: string) => {
+      if (roomId && socketManager.isConnected()) {
+        try {
+          await socketManager.emit('send-message', {
+            roomId,
+            message,
+            senderId,
+            senderName,
+          });
+        } catch (error) {
+          console.error('useSocket: Failed to send message:', error);
+        }
+      } else {
+        console.warn('useSocket: Cannot send message - not connected or no roomId');
+      }
+    },
+    [roomId]
+  );
+
+  const startTyping = useCallback(
+    async (userName: string) => {
+      if (roomId && socketManager.isConnected()) {
+        try {
+          await socketManager.emit('typing-start', { roomId, userName });
+        } catch (error) {
+          console.error('useSocket: Failed to start typing:', error);
+        }
+      }
+    },
+    [roomId]
+  );
+
+  const stopTyping = useCallback(
+    async (userName: string) => {
+      if (roomId && socketManager.isConnected()) {
+        try {
+          await socketManager.emit('typing-stop', { roomId, userName });
+        } catch (error) {
+          console.error('useSocket: Failed to stop typing:', error);
+        }
+      }
+    },
+    [roomId]
+  );
+
+  const updateUserStatus = useCallback(
+    async (userId: string, status: 'online' | 'offline' | 'away') => {
+      if (roomId && socketManager.isConnected()) {
+        try {
+          await socketManager.emit('user-status-change', { roomId, userId, status });
+        } catch (error) {
+          console.error('useSocket: Failed to update user status:', error);
+        }
+      }
+    },
+    [roomId]
+  );
 
   return {
-    socket: socketRef.current,
-    ...socketState,
-    connect,
-    disconnect,
-    emit,
-    on,
-    off,
+    socket: socketManager.isConnected() ? { id: socketManager.getSocketId() } : null,
+    isConnected,
+    reconnectAttempts,
+    sendMessage,
+    startTyping,
+    stopTyping,
+    updateUserStatus,
   };
 };

@@ -75,7 +75,7 @@ function SearchPageContent() {
         });
         if (response.ok) {
           const result = await response.json();
-          setUser(result.data);
+          setUser(result.data.user);
         }
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -85,8 +85,8 @@ function SearchPageContent() {
     checkAuth();
 
     // Get search params
-    const q = searchParams.get('q') || '';
-    const location = searchParams.get('location') || '';
+    const q = searchParams?.get('q') || '';
+    const location = searchParams?.get('location') || '';
     setSearchQuery(q);
     setLocationQuery(location);
 

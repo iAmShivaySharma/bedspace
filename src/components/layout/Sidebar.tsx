@@ -59,7 +59,6 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
     const commonItems: NavItem[] = [
       { name: 'Dashboard', href: '/dashboard', icon: Home },
       { name: 'Search', href: '/search', icon: Search },
-      { name: 'Messages', href: '/messages', icon: MessageCircle, badge: 2 },
       { name: 'Profile', href: '/profile', icon: User },
     ];
 
@@ -181,12 +180,12 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
     }
 
     // Special handling for provider listings to avoid conflicts
-    if (href === '/provider/listings' && pathname.startsWith('/provider/listings/')) {
+    if (href === '/provider/listings' && pathname?.startsWith('/provider/listings/')) {
       return false; // Don't highlight "My Listings" when on sub-pages like /provider/listings/new
     }
 
     // For other nested paths, check if pathname starts with href but ensure exact segment matching
-    if (pathname.startsWith(href + '/')) {
+    if (pathname?.startsWith(href + '/')) {
       const pathSegments = pathname.split('/');
       const hrefSegments = href.split('/');
 

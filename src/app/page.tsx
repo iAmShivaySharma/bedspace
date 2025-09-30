@@ -54,7 +54,7 @@ export default function Home() {
         });
         if (response.ok) {
           const result = await response.json();
-          setUser(result.data);
+          setUser(result.data.user);
         }
       } catch (error) {
         console.error('Auth check failed:', error);

@@ -40,7 +40,7 @@ export default function DashboardLayout({ children, title }: DashboardLayoutProp
 
         if (response.ok) {
           const result = await response.json();
-          setUser(result.data);
+          setUser(result.data.user);
         } else {
           router.push('/auth');
         }

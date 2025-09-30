@@ -71,7 +71,8 @@ export default function DashboardHeader({ user, onMenuToggle, title }: Dashboard
     router.push('/');
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | undefined) => {
+    if (!name) return 'U'; // Return 'U' for User if name is undefined
     return name
       .split(' ')
       .map(n => n[0])

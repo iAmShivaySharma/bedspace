@@ -58,11 +58,11 @@ export default function ProviderListingsPage() {
         }
 
         const userData = await userResponse.json();
-        if (userData.success && userData.data) {
-          setUser(userData.data);
+        if (userData.success && userData.data.user) {
+          setUser(userData.data.user);
 
           // Only fetch listings if user is verified
-          if (userData.data.verificationStatus === 'approved') {
+          if (userData.data.user.verificationStatus === 'approved') {
             const listingsResponse = await fetch('/api/providers/listings', {
               credentials: 'include',
             });

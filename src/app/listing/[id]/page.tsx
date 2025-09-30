@@ -89,7 +89,7 @@ export default function ListingDetailsPage() {
           });
           if (userResponse.ok) {
             const userData = await userResponse.json();
-            setUser(userData.data);
+            setUser(userData.data.user);
           }
         } catch {
           // User not authenticated, continue without user data

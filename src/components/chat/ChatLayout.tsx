@@ -35,7 +35,7 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
 
   // Handle URL-based conversation selection
   useEffect(() => {
-    const conversationId = searchParams.get('conversation') || defaultConversationId;
+    const conversationId = searchParams?.get('conversation') || defaultConversationId;
     if (conversationId && conversationsData?.data) {
       const conversation = conversationsData.data.find(c => c.id === conversationId);
       if (conversation) {
@@ -59,11 +59,11 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
 
   return (
     <div className={`flex h-full bg-gray-50 ${className}`}>
-      {/* Conversations Sidebar */}
+      {/* Conversations Sidebar - Fixed width, better responsive */}
       <div
         className={`${
           isMobile && selectedConversation ? 'hidden' : 'flex'
-        } w-full md:w-80 lg:w-96 border-r border-gray-200 bg-white flex-shrink-0`}
+        } w-full md:w-80 xl:w-96 border-r border-gray-200 bg-white flex-shrink-0 flex-col`}
       >
         <ConversationList
           onSelectConversation={handleSelectConversation}
@@ -72,17 +72,21 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
         />
       </div>
 
-      {/* Chat Window */}
-      <div className={`flex-1 ${!selectedConversation && !isMobile ? 'hidden md:flex' : 'flex'}`}>
+      {/* Chat Window - Better flex handling */}
+      <div
+        className={`flex-1 min-w-0 ${!selectedConversation && !isMobile ? 'hidden md:flex' : 'flex'}`}
+      >
         {selectedConversation ? (
-          <ChatWindow
-            conversation={selectedConversation}
-            onClose={isMobile ? handleCloseChat : undefined}
-          />
+          <div className='w-full h-full'>
+            <ChatWindow
+              conversation={selectedConversation}
+              onClose={isMobile ? handleCloseChat : undefined}
+            />
+          </div>
         ) : (
-          <div className='flex-1 flex items-center justify-center bg-gray-50'>
-            <div className='text-center text-gray-500'>
-              <div className='w-24 h-24 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center'>
+          <div className='flex-1 flex items-center justify-center bg-gray-50 p-8'>
+            <div className='text-center text-gray-500 max-w-md'>
+              <div className='w-24 h-24 mx-auto mb-6 bg-gray-200 rounded-full flex items-center justify-center'>
                 <svg
                   className='w-12 h-12 text-gray-400'
                   fill='none'
@@ -97,13 +101,14 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
                   />
                 </svg>
               </div>
-              <h3 className='text-lg font-medium text-gray-900 mb-2'>Welcome to Messages</h3>
-              <p className='text-gray-500 mb-4'>
-                Select a conversation to start messaging or create a new one.
+              <h3 className='text-xl font-semibold text-gray-900 mb-3'>Welcome to Messages</h3>
+              <p className='text-gray-500 mb-6 leading-relaxed'>
+                Select a conversation from the sidebar to start messaging, or create a new
+                conversation to connect with someone.
               </p>
               <button
                 onClick={() => setShowNewChatModal(true)}
-                className='px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors'
+                className='px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm'
               >
                 Start New Conversation
               </button>

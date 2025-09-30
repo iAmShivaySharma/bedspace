@@ -69,8 +69,8 @@ export default function ProfilePage() {
 
       if (response.ok) {
         const data = await response.json();
-        setProfile(data.data);
-        setFormData(data.data);
+        setProfile(data.data.user);
+        setFormData(data.data.user);
       }
     } catch (error) {
       console.error('Failed to fetch profile:', error);

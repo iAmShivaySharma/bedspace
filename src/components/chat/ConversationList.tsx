@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Search, Plus, MessageCircle } from 'lucide-react';
 import { useGetConversationsQuery } from '@/lib/api/commonApi';
-import { useChat } from '@/hooks/useChat';
+import { useSocket } from '@/hooks/useSocket';
 import { useAppSelector } from '@/lib/store/hooks';
 import { formatDistanceToNow } from 'date-fns';
 import type { Conversation } from '@/types';
@@ -21,7 +21,23 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 }) => {
   const { user } = useAppSelector(state => state.auth);
   const [searchTerm, setSearchTerm] = useState('');
-  const { isUserOnline, connected } = useChat();
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+
+  // Initialize socket for real-time updates
+  const { isConnected } = useSocket({
+    roomId: 'conversations-list', // General room for conversation updates
+    onUserStatusUpdated: (data: { userId: string; status: string }) => {
+      setOnlineUsers(prev => {
+        const newSet = new Set(prev);
+        if (data.status === 'online') {
+          newSet.add(data.userId);
+        } else {
+          newSet.delete(data.userId);
+        }
+        return newSet;
+      });
+    },
+  });
 
   const {
     data: conversationsData,
@@ -30,15 +46,27 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     refetch,
   } = useGetConversationsQuery(
     { page: 1, limit: 50 },
-    { pollingInterval: connected ? 0 : 30000 } // No polling when websocket is connected
+    { pollingInterval: isConnected ? 0 : 30000 } // No polling when websocket is connected
   );
 
   const filteredConversations =
-    conversationsData?.data?.filter(
-      conversation =>
+    conversationsData?.data?.filter(conversation => {
+      // Additional validation: ensure conversation has valid participant and user is not seeing their own chat
+      if (
+        !conversation.participant ||
+        !conversation.participant.id ||
+        conversation.participant.id === user?._id
+      ) {
+        return false;
+      }
+
+      // Search filter
+      const matchesSearch =
         conversation.participant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conversation.lastMessage?.content?.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
+        conversation.lastMessage?.content?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      return matchesSearch;
+    }) || [];
 
   const formatLastMessageTime = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -60,7 +88,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   const renderConversationItem = (conversation: Conversation) => {
     const isSelected = selectedConversationId === conversation.id;
-    const isOnline = isUserOnline(conversation.participant.id);
+    const isOnline = onlineUsers.has(conversation.participant.id);
     const hasUnread = conversation.unreadCount > 0;
 
     return (
@@ -98,7 +126,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             <p className={`text-sm truncate ${hasUnread ? 'font-medium' : 'text-gray-600'}`}>
               {conversation.lastMessage ? (
                 <>
-                  {conversation.lastMessage.senderId === user?.id && (
+                  {conversation.lastMessage.senderId === user?._id && (
                     <span className='text-gray-500'>You: </span>
                   )}
                   {truncateMessage(conversation.lastMessage.content)}
@@ -177,7 +205,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       </div>
 
       {/* Connection Status */}
-      {!connected && (
+      {!isConnected && (
         <div className='p-2 bg-amber-100 text-amber-800 text-sm text-center'>
           Connection lost. Messages may be delayed.
         </div>

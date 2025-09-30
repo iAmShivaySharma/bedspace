@@ -20,6 +20,7 @@ interface NotificationData {
 interface MessagePayload {
   conversationId: string;
   content: string;
+  receiverId: string;
   messageType?: 'text' | 'image' | 'file';
 }
 

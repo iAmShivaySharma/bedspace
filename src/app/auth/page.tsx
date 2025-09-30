@@ -16,7 +16,7 @@ export default function AuthPage() {
   const [error, setError] = useState('');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get('redirect');
+  const redirectUrl = searchParams?.get('redirect');
 
   const handleRegisterSuccess = (data: any) => {
     setUserEmail(data.email);

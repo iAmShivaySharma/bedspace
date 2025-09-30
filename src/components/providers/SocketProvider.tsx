@@ -1,14 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useEffect } from 'react';
-import { useSocket } from '@/hooks/useSocket';
-import { useAppSelector } from '@/lib/store/hooks';
+import React, { createContext, useContext } from 'react';
 
+// Simple context that can be used if needed for global socket state
 interface SocketContextType {
-  socket: any;
-  connected: boolean;
-  connecting: boolean;
-  error: string | null;
+  // This provider is now simplified since useSocket hook handles everything
+  isSocketSupported: boolean;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -18,17 +15,8 @@ interface SocketProviderProps {
 }
 
 export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
-  const { isAuthenticated } = useAppSelector(state => state.auth);
-
-  const socketData = useSocket({
-    autoConnect: isAuthenticated,
-  });
-
   const value: SocketContextType = {
-    socket: socketData.socket,
-    connected: socketData.connected,
-    connecting: socketData.connecting,
-    error: socketData.error,
+    isSocketSupported: typeof window !== 'undefined',
   };
 
   return <SocketContext.Provider value={value}>{children}</SocketContext.Provider>;

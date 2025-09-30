@@ -136,30 +136,7 @@ export const seekerApi = bedspaceApi.injectEndpoints({
       ],
     }),
 
-    addToFavorites: builder.mutation<ApiResponse, FavoritePayload>({
-      query: data => ({
-        url: '/seeker/favorites',
-        method: 'POST',
-        body: data,
-      }),
-      invalidatesTags: [
-        { type: 'SeekerFavorite', id: 'LIST' },
-        'SeekerStats',
-        { type: 'SeekerActivity', id: 'LIST' },
-      ],
-    }),
-
-    removeFromFavorites: builder.mutation<ApiResponse, string>({
-      query: listingId => ({
-        url: `/seeker/favorites/${listingId}`,
-        method: 'DELETE',
-      }),
-      invalidatesTags: [
-        { type: 'SeekerFavorite', id: 'LIST' },
-        'SeekerStats',
-        { type: 'SeekerActivity', id: 'LIST' },
-      ],
-    }),
+    // Favorite endpoints moved to commonApi to avoid duplication
 
     searchListings: builder.query<PaginatedResponse<Listing>, SearchFilters>({
       query: filters => {
@@ -219,4 +196,5 @@ export const {
   useGetListingByIdQuery,
   useCreatePaymentIntentMutation,
   useConfirmPaymentMutation,
+  // addToFavorites and removeFromFavorites hooks are exported from commonApi
 } = seekerApi;
