@@ -47,6 +47,9 @@ const statusColors = {
 export default function ProviderVisitsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedVisitId, setSelectedVisitId] = useState<string>('');
+  const [notesText, setNotesText] = useState<string>('');
   const { formatDate } = useDateTime();
 
   const {
@@ -86,10 +89,77 @@ export default function ProviderVisitsPage() {
 
   const handleStatusUpdate = async (visitId: string, newStatus: 'confirmed' | 'cancelled') => {
     try {
-      // TODO: Implement status update API call
-      console.log('Updating visit', visitId, 'to', newStatus);
+      const response = await fetch('/api/visits', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          visitId,
+          status: newStatus,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update visit status');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Refresh the visits data to show updated status
+        window.location.reload();
+      } else {
+        throw new Error(result.error || 'Failed to update visit status');
+      }
     } catch (error) {
       console.error('Error updating visit status:', error);
+      alert('Failed to update visit status. Please try again.');
+    }
+  };
+
+  const handleAddNotes = (visitId: string, currentNotes?: string) => {
+    setSelectedVisitId(visitId);
+    setNotesText(currentNotes || '');
+    setShowNotesModal(true);
+  };
+
+  const handleSaveNotes = async () => {
+    if (!selectedVisitId) return;
+
+    try {
+      const response = await fetch('/api/visits', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          visitId: selectedVisitId,
+          status: visits.find((v: Visit) => v.id === selectedVisitId)?.status, // Keep current status
+          providerNotes: notesText.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save notes');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setShowNotesModal(false);
+        setSelectedVisitId('');
+        setNotesText('');
+        // Refresh the visits data to show updated notes
+        window.location.reload();
+      } else {
+        throw new Error(result.error || 'Failed to save notes');
+      }
+    } catch (error) {
+      console.error('Error saving notes:', error);
+      alert('Failed to save notes. Please try again.');
     }
   };
 
@@ -267,7 +337,7 @@ export default function ProviderVisitsPage() {
                   </div>
 
                   {/* Notes */}
-                  {(visit.notes || visit.seekerNotes) && (
+                  {(visit.notes || visit.seekerNotes || visit.providerNotes) && (
                     <div className='border-t pt-4 mb-4'>
                       {visit.notes && (
                         <div className='mb-2'>
@@ -278,11 +348,17 @@ export default function ProviderVisitsPage() {
                         </div>
                       )}
                       {visit.seekerNotes && (
-                        <div>
+                        <div className='mb-2'>
                           <span className='text-sm font-medium text-gray-700'>
                             Additional Notes:
                           </span>
                           <p className='text-sm text-gray-600 mt-1'>{visit.seekerNotes}</p>
+                        </div>
+                      )}
+                      {visit.providerNotes && (
+                        <div>
+                          <span className='text-sm font-medium text-gray-700'>Provider Notes:</span>
+                          <p className='text-sm text-gray-600 mt-1'>{visit.providerNotes}</p>
                         </div>
                       )}
                     </div>
@@ -308,7 +384,11 @@ export default function ProviderVisitsPage() {
                         <XCircle className='h-4 w-4 mr-1' />
                         Decline
                       </Button>
-                      <Button size='sm' variant='outline'>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() => handleAddNotes(visit.id, visit.providerNotes)}
+                      >
                         <FileText className='h-4 w-4 mr-1' />
                         Add Notes
                       </Button>
@@ -324,7 +404,11 @@ export default function ProviderVisitsPage() {
                       >
                         Cancel Visit
                       </Button>
-                      <Button size='sm' variant='outline'>
+                      <Button
+                        size='sm'
+                        variant='outline'
+                        onClick={() => handleAddNotes(visit.id, visit.providerNotes)}
+                      >
                         <FileText className='h-4 w-4 mr-1' />
                         Add Notes
                       </Button>
@@ -355,6 +439,36 @@ export default function ProviderVisitsPage() {
           </div>
         )}
       </div>
+
+      {/* Notes Modal */}
+      {showNotesModal && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50'>
+          <div className='bg-white rounded-lg p-6 w-full max-w-md mx-4'>
+            <h3 className='text-lg font-semibold mb-4'>Add Notes</h3>
+            <textarea
+              value={notesText}
+              onChange={e => setNotesText(e.target.value)}
+              placeholder='Add your notes about this visit...'
+              className='w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+            />
+            <div className='flex justify-end space-x-3 mt-4'>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  setShowNotesModal(false);
+                  setSelectedVisitId('');
+                  setNotesText('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveNotes} className='bg-blue-600 hover:bg-blue-700'>
+                Save Notes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

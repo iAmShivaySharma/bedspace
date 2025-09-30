@@ -83,36 +83,39 @@ export async function GET(request: NextRequest) {
     const totalResults = await Listing.countDocuments(dbQuery);
 
     // Transform listings to match frontend format
-    const transformedListings = listings.map(listing => ({
-      id: listing._id.toString(),
-      title: listing.title,
-      description: listing.description,
-      location: `${listing.address}, ${listing.city}`,
-      price: listing.rent,
-      type:
-        listing.roomType === 'single'
-          ? 'private'
-          : listing.roomType === 'shared'
-            ? 'shared'
-            : 'entire',
-      gender: listing.genderPreference,
-      amenities: listing.facilities || [],
-      images: listing.images?.map((img: any) => img.fileUrl) || ['/api/placeholder/400/300'],
-      provider: {
-        id: listing.providerId._id.toString(),
-        name: listing.providerId.name,
-        rating: (4.0 + Math.random()).toFixed(1), // Placeholder rating
-        verified: listing.providerId.verificationStatus === 'approved',
-      },
-      coordinates: listing.coordinates || { lat: 19.076, lng: 72.8777 }, // Default Mumbai coords
-      rent: listing.rent,
-      securityDeposit: listing.securityDeposit,
-      roomType: listing.roomType,
-      genderPreference: listing.genderPreference,
-      availableFrom: listing.availableFrom,
-      createdAt: listing.createdAt,
-      updatedAt: listing.updatedAt,
-    }));
+    const transformedListings = listings.map(listing => {
+      const provider = listing.providerId as any; // Cast to any to access populated fields
+      return {
+        id: listing._id.toString(),
+        title: listing.title,
+        description: listing.description,
+        location: `${listing.address}, ${listing.city}`,
+        price: listing.rent,
+        type:
+          listing.roomType === 'single'
+            ? 'private'
+            : listing.roomType === 'shared'
+              ? 'shared'
+              : 'entire',
+        gender: listing.genderPreference,
+        amenities: listing.facilities || [],
+        images: listing.images?.map((img: any) => img.fileUrl) || ['/api/placeholder/400/300'],
+        provider: {
+          id: provider._id.toString(),
+          name: provider.name,
+          rating: (4.0 + Math.random()).toFixed(1), // Placeholder rating
+          verified: provider.verificationStatus === 'approved',
+        },
+        coordinates: listing.coordinates || { lat: 19.076, lng: 72.8777 }, // Default Mumbai coords
+        rent: listing.rent,
+        securityDeposit: listing.securityDeposit,
+        roomType: listing.roomType,
+        genderPreference: listing.genderPreference,
+        availableFrom: listing.availableFrom,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+      };
+    });
 
     // Calculate pagination info
     const totalPages = Math.ceil(totalResults / limit);

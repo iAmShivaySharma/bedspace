@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
       genderPreference,
       facilities,
       availableFrom,
+      images,
     } = body;
 
     if (
@@ -109,6 +110,14 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
 
+    // Process images array to match the model structure
+    const processedImages = (images || []).map((img: any, index: number) => ({
+      fileName: img.fileName,
+      fileUrl: img.fileUrl,
+      isPrimary: index === 0, // First image is primary
+      uploadedAt: new Date(),
+    }));
+
     const listing = new Listing({
       providerId: user._id,
       title,
@@ -122,6 +131,7 @@ export async function POST(request: NextRequest) {
       roomType,
       genderPreference,
       facilities: facilities || [],
+      images: processedImages,
       availableFrom: new Date(availableFrom),
       isActive: true,
       isApproved: false, // All new listings need admin approval

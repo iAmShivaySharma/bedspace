@@ -66,12 +66,15 @@ export default function AdminListingsPage() {
     action: 'approve' | 'reject' | 'deactivate' | 'activate'
   ) => {
     try {
-      await adminListingAction({ listingId, action }).unwrap();
-      setMessage(`Listing ${action}d successfully`);
+      const result = await adminListingAction({ listingId, action }).unwrap();
+      setMessage(result.message || `Listing ${action}d successfully`);
       setTimeout(() => setMessage(''), 3000);
+      // Force refresh of listings data
+      fetchListings();
     } catch (error: any) {
       console.error(`Error ${action}ing listing:`, error);
-      setMessage(error?.data?.error || `Failed to ${action} listing`);
+      const errorMessage = error?.data?.error || error?.message || `Failed to ${action} listing`;
+      setMessage(errorMessage);
       setTimeout(() => setMessage(''), 5000);
     }
   };

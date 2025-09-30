@@ -215,14 +215,33 @@ export default function ListingDetailsPage() {
           {/* Images */}
           <Card>
             <CardContent className='p-0'>
-              <div className='aspect-video bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center rounded-t-lg'>
-                <div className='text-center'>
-                  <div className='w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg'>
-                    <MapPin className='w-8 h-8 text-blue-600' />
-                  </div>
-                  <p className='text-sm text-gray-600'>Property Images</p>
+              {listing.images && listing.images.length > 0 ? (
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-2'>
+                  {listing.images.map((image, index) => (
+                    <div
+                      key={index}
+                      className={`${
+                        index === 0 ? 'md:col-span-2' : ''
+                      } aspect-video overflow-hidden rounded-lg`}
+                    >
+                      <img
+                        src={image.fileUrl}
+                        alt={`${listing.title} - Image ${index + 1}`}
+                        className='w-full h-full object-cover hover:scale-105 transition-transform duration-300'
+                      />
+                    </div>
+                  ))}
                 </div>
-              </div>
+              ) : (
+                <div className='aspect-video bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center rounded-t-lg'>
+                  <div className='text-center'>
+                    <div className='w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg'>
+                      <MapPin className='w-8 h-8 text-blue-600' />
+                    </div>
+                    <p className='text-sm text-gray-600'>No images available</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

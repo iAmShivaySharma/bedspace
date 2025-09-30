@@ -30,6 +30,7 @@ interface CreateListingPayload {
   genderPreference: 'male' | 'female' | 'any';
   facilities: string[];
   availableFrom: string;
+  images?: Array<{ fileName: string; fileUrl: string }>;
 }
 
 interface UpdateListingPayload extends Partial<CreateListingPayload> {

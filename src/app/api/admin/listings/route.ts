@@ -75,37 +75,42 @@ export async function GET(request: NextRequest) {
     const totalListings = await Listing.countDocuments(query);
 
     // Transform data to match admin panel format
-    const transformedListings = listings.map(listing => ({
-      _id: listing._id,
-      title: listing.title,
-      description: listing.description,
-      location: `${listing.address}, ${listing.city}`,
-      price: listing.rent,
-      provider: {
-        _id: listing.providerId._id,
-        name: listing.providerId.name,
-        email: listing.providerId.email,
-      },
-      // Map database status to frontend status
-      status: (() => {
-        if (!listing.isApproved && listing.rejectionReason) return 'rejected';
-        if (!listing.isApproved) return 'pending';
-        if (!listing.isActive) return 'inactive';
-        return 'active';
-      })(),
-      type:
-        listing.roomType === 'single'
-          ? 'private_room'
-          : listing.roomType === 'shared'
-            ? 'shared_room'
-            : 'entire_place',
-      amenities: listing.facilities || [],
-      images: listing.images?.map((img: any) => img.fileUrl) || [],
-      rating: (4.0 + Math.random()).toFixed(1), // Placeholder rating
-      reviewCount: Math.floor(Math.random() * 20) + 1, // Placeholder review count
-      createdAt: listing.createdAt,
-      updatedAt: listing.updatedAt,
-    }));
+    const transformedListings = listings.map(listing => {
+      const provider = listing.providerId as any; // Cast to any to access populated fields
+      return {
+        _id: listing._id,
+        title: listing.title,
+        description: listing.description,
+        location: `${listing.address}, ${listing.city}`,
+        price: listing.rent,
+        provider: {
+          _id: provider._id,
+          name: provider.name,
+          email: provider.email,
+        },
+        // Map database status to frontend status
+        status: (() => {
+          if (listing.rejectionReason) return 'rejected';
+          if (!listing.isApproved) return 'pending';
+          if (!listing.isActive) return 'inactive';
+          return 'active';
+        })(),
+        isApproved: listing.isApproved,
+        isActive: listing.isActive,
+        type:
+          listing.roomType === 'single'
+            ? 'private_room'
+            : listing.roomType === 'shared'
+              ? 'shared_room'
+              : 'entire_place',
+        amenities: listing.facilities || [],
+        images: listing.images?.map((img: any) => img.fileUrl) || [],
+        rating: (4.0 + Math.random()).toFixed(1), // Placeholder rating
+        reviewCount: Math.floor(Math.random() * 20) + 1, // Placeholder review count
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+      };
+    });
 
     return NextResponse.json({
       success: true,

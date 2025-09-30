@@ -203,3 +203,79 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  const startTime = Date.now();
+
+  try {
+    // Verify authentication
+    const authResult = await verifyAuth(request);
+    if (!authResult.success) {
+      logApiRequest('PATCH', '/api/visits', undefined, 401, Date.now() - startTime);
+      return NextResponse.json({ success: false, error: authResult.error }, { status: 401 });
+    }
+
+    const user = authResult.user as AuthenticatedUser;
+    await connectDB();
+
+    const body = await request.json();
+    const { visitId, status, providerNotes } = body;
+
+    if (!visitId || !status) {
+      return NextResponse.json(
+        { success: false, error: 'Visit ID and status are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate status
+    const validStatuses = ['confirmed', 'cancelled', 'completed'];
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json({ success: false, error: 'Invalid status' }, { status: 400 });
+    }
+
+    // Find the visit
+    const visit = await Visit.findById(visitId)
+      .populate('listingId', 'providerId')
+      .populate('seekerId', 'name email')
+      .populate('providerId', 'name email');
+
+    if (!visit) {
+      return NextResponse.json({ success: false, error: 'Visit not found' }, { status: 404 });
+    }
+
+    // Check authorization - only provider can update visit status
+    if (user.role !== 'provider' || visit.listingId.providerId.toString() !== user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized to update this visit' },
+        { status: 403 }
+      );
+    }
+
+    // Update the visit
+    visit.status = status;
+    if (providerNotes) {
+      visit.providerNotes = providerNotes.trim();
+    }
+    visit.updatedAt = new Date();
+
+    await visit.save();
+
+    logApiRequest('PATCH', '/api/visits', user.id, 200, Date.now() - startTime);
+
+    return NextResponse.json({
+      success: true,
+      message: `Visit ${status} successfully`,
+      data: {
+        id: visit._id.toString(),
+        status: visit.status,
+        providerNotes: visit.providerNotes,
+        updatedAt: visit.updatedAt.toISOString(),
+      },
+    });
+  } catch (error) {
+    logError('Error in PATCH /api/visits:', error);
+    logApiRequest('PATCH', '/api/visits', undefined, 500, Date.now() - startTime);
+    return NextResponse.json({ success: false, error: 'Failed to update visit' }, { status: 500 });
+  }
+}

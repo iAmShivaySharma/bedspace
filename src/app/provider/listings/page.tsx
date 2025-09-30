@@ -183,6 +183,30 @@ export default function ProviderListingsPage() {
                     </span>
                   </div>
                 </CardHeader>
+
+                {/* Listing Image */}
+                <div className='px-6'>
+                  {listing.images && listing.images.length > 0 ? (
+                    <div className='aspect-video overflow-hidden rounded-lg mb-4'>
+                      <img
+                        src={
+                          listing.images.find(img => img.isPrimary)?.fileUrl ||
+                          listing.images[0]?.fileUrl
+                        }
+                        alt={listing.title}
+                        className='w-full h-full object-cover hover:scale-105 transition-transform duration-300'
+                      />
+                    </div>
+                  ) : (
+                    <div className='aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center rounded-lg mb-4'>
+                      <div className='text-center'>
+                        <Building className='w-8 h-8 text-gray-400 mx-auto mb-2' />
+                        <p className='text-xs text-gray-500'>No Image</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <CardContent>
                   <p className='text-sm text-gray-600 line-clamp-2 mb-4'>{listing.description}</p>
 

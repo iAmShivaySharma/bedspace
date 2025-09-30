@@ -317,14 +317,24 @@ function SearchPageContent() {
                 className='overflow-hidden hover:shadow-lg transition-shadow cursor-pointer'
               >
                 <div className='relative'>
-                  <div className='aspect-video bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center'>
-                    <div className='text-center'>
-                      <div className='w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg'>
-                        <MapPin className='w-8 h-8 text-blue-600' />
-                      </div>
-                      <p className='text-sm text-gray-600'>Verified Listing</p>
+                  {listing.images && listing.images.length > 0 ? (
+                    <div className='aspect-video overflow-hidden'>
+                      <img
+                        src={listing.images[0]}
+                        alt={listing.title}
+                        className='w-full h-full object-cover hover:scale-105 transition-transform duration-300'
+                      />
                     </div>
-                  </div>
+                  ) : (
+                    <div className='aspect-video bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center'>
+                      <div className='text-center'>
+                        <div className='w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg'>
+                          <MapPin className='w-8 h-8 text-blue-600' />
+                        </div>
+                        <p className='text-sm text-gray-600'>No Image</p>
+                      </div>
+                    </div>
+                  )}
                   {(!user || user.role === 'seeker') && (
                     <div className='absolute top-3 right-3'>
                       <FavoriteButton

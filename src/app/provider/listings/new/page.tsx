@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateListingMutation } from '@/lib/api/providerApi';
+import { uploadMultipleFilesClient } from '@/utils/upload-client';
 import { ROOM_TYPES, GENDER_PREFERENCES, FACILITIES, INDIAN_STATES } from '@/constants';
 import { ArrowLeft, Home, Loader2, Plus, X, Upload, FileText, Image, Video } from 'lucide-react';
 
@@ -41,6 +42,10 @@ type ListingFormData = z.infer<typeof listingSchema>;
 export default function AddListingPage() {
   const router = useRouter();
   const [createListing, { isLoading }] = useCreateListingMutation();
+  const [uploadProgress, setUploadProgress] = useState<{ uploading: boolean; progress: number }>({
+    uploading: false,
+    progress: 0,
+  });
   const [selectedFacilities, setSelectedFacilities] = useState<string[]>([]);
   const [customFacilities, setCustomFacilities] = useState<string[]>([]);
   const [newCustomFacility, setNewCustomFacility] = useState('');
@@ -72,9 +77,40 @@ export default function AddListingPage() {
     try {
       const allFacilities = [...selectedFacilities, ...customFacilities];
 
+      // Upload images first
+      let uploadedImages: Array<{ fileName: string; fileUrl: string }> = [];
+
+      if (uploadedFiles.images.length > 0) {
+        setUploadProgress({ uploading: true, progress: 0 });
+
+        const imageUploadResults = await uploadMultipleFilesClient(
+          uploadedFiles.images,
+          'listings',
+          (fileIndex, progress) => {
+            // Calculate overall progress
+            const overallProgress = (fileIndex * 100 + progress) / uploadedFiles.images.length;
+            setUploadProgress({ uploading: true, progress: Math.round(overallProgress) });
+          }
+        );
+
+        // Check if all uploads succeeded
+        const failedUploads = imageUploadResults.filter(result => !result.success);
+        if (failedUploads.length > 0) {
+          throw new Error(`Failed to upload ${failedUploads.length} image(s)`);
+        }
+
+        uploadedImages = imageUploadResults.map(result => ({
+          fileName: result.data!.fileName,
+          fileUrl: result.data!.publicUrl,
+        }));
+
+        setUploadProgress({ uploading: false, progress: 100 });
+      }
+
       const result = await createListing({
         ...data,
         facilities: allFacilities,
+        images: uploadedImages,
       }).unwrap();
 
       if (result.success) {
@@ -82,6 +118,7 @@ export default function AddListingPage() {
       }
     } catch (error: any) {
       console.error('Failed to create listing:', error);
+      alert(error.message || 'Failed to create listing. Please try again.');
     }
   };
 
@@ -605,8 +642,17 @@ export default function AddListingPage() {
               Cancel
             </Button>
 
-            <Button type='submit' disabled={isLoading} className='min-w-[120px]'>
-              {isLoading ? (
+            <Button
+              type='submit'
+              disabled={isLoading || uploadProgress.uploading}
+              className='min-w-[140px]'
+            >
+              {uploadProgress.uploading ? (
+                <>
+                  <Loader2 className='w-4 h-4 mr-2 animate-spin' />
+                  Uploading... {uploadProgress.progress}%
+                </>
+              ) : isLoading ? (
                 <>
                   <Loader2 className='w-4 h-4 mr-2 animate-spin' />
                   Creating...

@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, User, Settings, LogOut, Bell, MessageCircle, Shield } from 'lucide-react';
+import { Menu, User, Settings, LogOut, Bell, Shield } from 'lucide-react';
 
 interface User {
   _id: string;
@@ -32,9 +32,8 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({ user, onMenuToggle, title }: DashboardHeaderProps) {
   const router = useRouter();
   const [notifications, setNotifications] = useState(0);
-  const [messages, setMessages] = useState(0);
 
-  // Fetch live notification and message counts
+  // Fetch live notification count
   useEffect(() => {
     const fetchCounts = async () => {
       try {
@@ -43,13 +42,6 @@ export default function DashboardHeader({ user, onMenuToggle, title }: Dashboard
         if (notifResponse.ok) {
           const notifData = await notifResponse.json();
           setNotifications(notifData.data?.count || 0);
-        }
-
-        // Fetch messages count (token now in cookie)
-        const msgResponse = await fetch('/api/messages/unread-count');
-        if (msgResponse.ok) {
-          const msgData = await msgResponse.json();
-          setMessages(msgData.data?.count || 0);
         }
       } catch (error) {
         console.error('Error fetching counts:', error);
@@ -148,21 +140,6 @@ export default function DashboardHeader({ user, onMenuToggle, title }: Dashboard
           {notifications > 0 && (
             <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center'>
               {notifications > 9 ? '9+' : notifications}
-            </span>
-          )}
-        </Button>
-
-        {/* Messages */}
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => router.push('/messages')}
-          className='relative'
-        >
-          <MessageCircle className='h-5 w-5' />
-          {messages > 0 && (
-            <span className='absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center'>
-              {messages > 9 ? '9+' : messages}
             </span>
           )}
         </Button>
