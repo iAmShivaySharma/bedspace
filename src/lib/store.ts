@@ -17,7 +17,12 @@ export const store = configureStore({
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActionPaths: ['meta.arg', 'payload.timestamp'],
+        ignoredActionPaths: [
+          'meta.arg',
+          'payload.timestamp',
+          'meta.baseQueryMeta.request',
+          'meta.baseQueryMeta.response',
+        ],
       },
     }).concat(bedspaceApi.middleware),
   devTools: process.env.NODE_ENV !== 'production',

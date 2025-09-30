@@ -46,7 +46,10 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     refetch,
   } = useGetConversationsQuery(
     { page: 1, limit: 50 },
-    { pollingInterval: isConnected ? 0 : 30000 } // No polling when websocket is connected
+    {
+      pollingInterval: isConnected ? 0 : 30000, // No polling when websocket is connected
+      skip: !user, // Skip the query if user is not available
+    }
   );
 
   const filteredConversations =
@@ -55,7 +58,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       if (
         !conversation.participant ||
         !conversation.participant.id ||
-        conversation.participant.id === user?._id
+        conversation.participant.id === user?._id?.toString()
       ) {
         return false;
       }
@@ -126,7 +129,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             <p className={`text-sm truncate ${hasUnread ? 'font-medium' : 'text-gray-600'}`}>
               {conversation.lastMessage ? (
                 <>
-                  {conversation.lastMessage.senderId === user?._id && (
+                  {conversation.lastMessage.senderId === user?._id?.toString() && (
                     <span className='text-gray-500'>You: </span>
                   )}
                   {truncateMessage(conversation.lastMessage.content)}

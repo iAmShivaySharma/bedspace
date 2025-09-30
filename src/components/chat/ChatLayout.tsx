@@ -6,6 +6,7 @@ import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { NewChatModal } from './NewChatModal';
 import { useGetConversationsQuery } from '@/lib/api/commonApi';
+import { useAppSelector } from '@/lib/store/hooks';
 import type { Conversation } from '@/types';
 
 interface ChatLayoutProps {
@@ -22,7 +23,11 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   const [isMobile, setIsMobile] = useState(false);
 
   const searchParams = useSearchParams();
-  const { data: conversationsData } = useGetConversationsQuery({ page: 1, limit: 50 });
+  const { user } = useAppSelector(state => state.auth);
+  const { data: conversationsData, isLoading: conversationsLoading } = useGetConversationsQuery(
+    { page: 1, limit: 50 },
+    { skip: !user } // Skip until user is available
+  );
 
   useEffect(() => {
     const checkMobile = () => {
@@ -36,13 +41,13 @@ export const ChatLayout: React.FC<ChatLayoutProps> = ({
   // Handle URL-based conversation selection
   useEffect(() => {
     const conversationId = searchParams?.get('conversation') || defaultConversationId;
-    if (conversationId && conversationsData?.data) {
+    if (conversationId && conversationsData?.data && user) {
       const conversation = conversationsData.data.find(c => c.id === conversationId);
       if (conversation) {
         setSelectedConversation(conversation);
       }
     }
-  }, [searchParams, defaultConversationId, conversationsData]);
+  }, [searchParams, defaultConversationId, conversationsData, user]);
 
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
