@@ -152,13 +152,15 @@ export const seekerApi = bedspaceApi.injectEndpoints({
         });
         return `/search?${params.toString()}`;
       },
-      providesTags: result =>
-        result?.data
-          ? [
-              ...result.data.map(({ _id }) => ({ type: 'Listing' as const, id: _id })),
-              { type: 'Listing', id: 'SEARCH' },
-            ]
-          : [{ type: 'Listing', id: 'SEARCH' }],
+      providesTags: result => {
+        if (result?.data && Array.isArray(result.data)) {
+          return [
+            ...result.data.map(({ _id }) => ({ type: 'Listing' as const, id: _id })),
+            { type: 'Listing', id: 'SEARCH' },
+          ];
+        }
+        return [{ type: 'Listing', id: 'SEARCH' }];
+      },
     }),
 
     getListingById: builder.query<ApiResponse<Listing>, string>({

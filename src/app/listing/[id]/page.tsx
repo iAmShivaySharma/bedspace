@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useCurrency } from '@/contexts/LocalizationContext';
+import { useCurrency } from '@/hooks/useLocalization';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { PageSkeleton } from '@/components/ui/page-skeleton';

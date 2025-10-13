@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useCurrency } from '@/contexts/LocalizationContext';
+import { useCurrency } from '@/hooks/useLocalization';
 import { Button } from '@/components/ui/button';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import HomeHeader from '@/components/layout/HomeHeader';
 import FavoriteButton from '@/components/ui/FavoriteButton';
+import { useGetCurrentUserQuery } from '@/lib/api/authApi';
+import { useSearchListingsQuery } from '@/lib/api/seekerApi';
+import { useDetectLocationMutation } from '@/lib/api/commonApi';
 import {
   Search,
   MapPin,
@@ -26,61 +29,32 @@ import {
   Dumbbell,
   Building,
 } from 'lucide-react';
+import type { Listing } from '@/types';
 
-interface User {
-  id: string;
-  role: 'seeker' | 'provider' | 'admin';
-  name: string;
-  email: string;
-}
+// Using User type from @/types
 
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<User | null>(null);
   const { formatCurrency } = useCurrency();
   const [searchQuery, setSearchQuery] = useState('');
   const [locationQuery, setLocationQuery] = useState('');
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [featuredListings, setFeaturedListings] = useState<any[]>([]);
-  const [loadingListings, setLoadingListings] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const response = await fetch('/api/auth/me', {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const result = await response.json();
-          setUser(result.data.user);
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      }
-      setIsLoading(false);
-    };
+  // Get current user with RTK Query
+  const { data: currentUser, isLoading } = useGetCurrentUserQuery();
+  const user = currentUser?.data?.user;
 
-    const fetchFeaturedListings = async () => {
-      try {
-        const response = await fetch('/api/search?limit=3&page=1', {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const result = await response.json();
-          setFeaturedListings(result.data?.listings || []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch featured listings:', error);
-      } finally {
-        setLoadingListings(false);
-      }
-    };
+  // Get featured listings with RTK Query
+  const { data: featuredListingsData, isLoading: loadingListings } = useSearchListingsQuery({
+    limit: 3,
+    page: 1,
+  });
+  const featuredListings = featuredListingsData?.data || [];
 
-    checkAuth();
-    fetchFeaturedListings();
-  }, []);
+  // Location detection mutation
+  const [detectLocation, { isLoading: isDetectingLocation }] = useDetectLocationMutation();
+
+  // No useEffect needed - RTK Query handles data fetching automatically
 
   const handleGetStarted = () => {
     if (user) {
@@ -98,8 +72,7 @@ export default function Home() {
     router.push(`/search?${params.toString()}`);
   };
 
-  const detectLocation = async () => {
-    setIsDetectingLocation(true);
+  const handleDetectLocation = async () => {
     try {
       if (!navigator.geolocation) {
         alert('Geolocation is not supported by this browser.');
@@ -109,37 +82,26 @@ export default function Home() {
       navigator.geolocation.getCurrentPosition(
         async position => {
           try {
-            const response = await fetch('/api/location/detect', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-              }),
-            });
+            const result = await detectLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            }).unwrap();
 
-            if (response.ok) {
-              const result = await response.json();
-              setLocationQuery(result.data.area + ', ' + result.data.city);
-            } else {
-              console.error('Failed to detect location');
+            const locationData = result.data;
+            if (locationData) {
+              setLocationQuery((locationData as any).area + ', ' + (locationData as any).city);
             }
           } catch (error) {
             console.error('Error detecting location:', error);
-          } finally {
-            setIsDetectingLocation(false);
           }
         },
         error => {
           console.error('Geolocation error:', error);
           alert('Unable to detect your location. Please enter manually.');
-          setIsDetectingLocation(false);
         }
       );
     } catch (error) {
       console.error('Location detection error:', error);
-      setIsDetectingLocation(false);
     }
   };
 
@@ -201,7 +163,7 @@ export default function Home() {
                         type='button'
                         variant='ghost'
                         size='sm'
-                        onClick={detectLocation}
+                        onClick={handleDetectLocation}
                         disabled={isDetectingLocation}
                         className='absolute right-2 top-1/2 transform -translate-y-1/2 p-1 h-8 w-8'
                       >
@@ -319,19 +281,19 @@ export default function Home() {
                 </Card>
               ))
             ) : featuredListings.length > 0 ? (
-              featuredListings.map(listing => (
+              featuredListings.map((listing: Listing) => (
                 <Card
-                  key={listing.id}
+                  key={listing._id}
                   className='overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group'
-                  onClick={() => router.push(`/listing/${listing.id}`)}
+                  onClick={() => router.push(`/listing/${listing._id}`)}
                 >
                   <div className='relative'>
                     <div className='aspect-[4/3] bg-gray-200 overflow-hidden'>
                       {listing.images &&
                       listing.images.length > 0 &&
-                      listing.images[0] !== '/api/placeholder/400/300' ? (
+                      listing.images[0]?.fileUrl !== '/api/placeholder/400/300' ? (
                         <img
-                          src={listing.images[0]}
+                          src={listing.images[0]?.fileUrl || ''}
                           alt={listing.title}
                           className='w-full h-full object-cover group-hover:scale-105 transition-transform duration-300'
                         />
@@ -349,7 +311,7 @@ export default function Home() {
                     {(!user || user.role === 'seeker') && (
                       <div className='absolute top-3 right-3'>
                         <FavoriteButton
-                          listingId={listing._id || listing.id}
+                          listingId={listing._id}
                           isAuthenticated={!!user}
                           onAuthRequired={() => router.push('/auth')}
                         />
@@ -360,7 +322,7 @@ export default function Home() {
                         Available Now
                       </span>
                     </div>
-                    {listing.provider?.verified && (
+                    {true && (
                       <div className='absolute top-3 left-3'>
                         <span className='bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center'>
                           <Shield className='w-3 h-3 mr-1' />
@@ -376,18 +338,16 @@ export default function Home() {
                       </h3>
                       <div className='flex items-center space-x-1'>
                         <Star className='w-4 h-4 fill-yellow-400 text-yellow-400' />
-                        <span className='text-sm font-medium'>
-                          {listing.provider?.rating || '4.5'}
-                        </span>
+                        <span className='text-sm font-medium'>4.5</span>
                         <span className='text-sm text-gray-500'>(12)</span>
                       </div>
                     </div>
                     <p className='text-gray-600 mb-3 flex items-center'>
                       <MapPin className='w-4 h-4 mr-1' />
-                      {listing.location}
+                      {listing.city}, {listing.state}
                     </p>
                     <div className='flex flex-wrap gap-1 mb-4'>
-                      {listing.amenities?.slice(0, 3).map((amenity: string) => (
+                      {listing.facilities?.slice(0, 3).map((amenity: string) => (
                         <span
                           key={amenity}
                           className='bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs capitalize'
@@ -395,16 +355,16 @@ export default function Home() {
                           {amenity}
                         </span>
                       ))}
-                      {listing.amenities?.length > 3 && (
+                      {listing.facilities?.length > 3 && (
                         <span className='bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs'>
-                          +{listing.amenities.length - 3} more
+                          +{listing.facilities.length - 3} more
                         </span>
                       )}
                     </div>
                     <div className='flex items-center justify-between'>
                       <div>
                         <span className='text-2xl font-bold text-gray-900'>
-                          {formatCurrency(listing.price || 0)}
+                          {formatCurrency(listing.rent || 0)}
                         </span>
                         <span className='text-gray-600'>/month</span>
                       </div>
@@ -413,7 +373,7 @@ export default function Home() {
                         className='bg-blue-600 hover:bg-blue-700'
                         onClick={e => {
                           e.stopPropagation();
-                          router.push(`/listing/${listing.id}`);
+                          router.push(`/listing/${listing._id}`);
                         }}
                       >
                         View Details

@@ -65,7 +65,6 @@ const ListingSchema = new Schema<IListing>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     title: {
       type: String,
@@ -92,20 +91,17 @@ const ListingSchema = new Schema<IListing>(
       required: true,
       trim: true,
       lowercase: true,
-      index: true,
     },
     state: {
       type: String,
       required: true,
       trim: true,
-      index: true,
     },
     pincode: {
       type: String,
       required: true,
       trim: true,
       match: /^\d{6}$/,
-      index: true,
     },
     coordinates: {
       latitude: {
@@ -123,7 +119,6 @@ const ListingSchema = new Schema<IListing>(
       type: Number,
       required: true,
       min: 0,
-      index: true,
     },
     securityDeposit: {
       type: Number,
@@ -134,13 +129,11 @@ const ListingSchema = new Schema<IListing>(
       type: String,
       enum: Object.values(ROOM_TYPES),
       required: true,
-      index: true,
     },
     genderPreference: {
       type: String,
       enum: Object.values(GENDER_PREFERENCES),
       required: true,
-      index: true,
     },
     facilities: [
       {
@@ -152,12 +145,10 @@ const ListingSchema = new Schema<IListing>(
     isActive: {
       type: Boolean,
       default: true,
-      index: true,
     },
     isApproved: {
       type: Boolean,
       default: false,
-      index: true,
     },
     approvedBy: {
       type: Schema.Types.ObjectId,
@@ -168,7 +159,6 @@ const ListingSchema = new Schema<IListing>(
     availableFrom: {
       type: Date,
       required: true,
-      index: true,
     },
     viewCount: {
       type: Number,

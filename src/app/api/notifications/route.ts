@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth } from '@/middleware/auth';
+import { authenticate } from '@/middleware/auth';
 import connectDB from '@/lib/mongodb';
 import { Notification } from '@/models/Notification';
 import { logApiRequest, logError } from '@/lib/logger';
@@ -8,12 +8,12 @@ export async function GET(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(request);
-    if (!authResult.success) {
+    // Authenticate user
+    const { user, error } = await authenticate(request);
+    if (error || !user) {
       logApiRequest('GET', '/api/notifications', undefined, 401, Date.now() - startTime);
       return NextResponse.json(
-        { success: false, error: 'Authentication required' },
+        { success: false, error: error || 'Authentication required' },
         { status: 401 }
       );
     }
@@ -26,37 +26,48 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const page = parseInt(searchParams.get('page') || '1');
 
-    const user = authResult.user as { id: string; role: string };
     const skip = (page - 1) * limit;
 
-    // Get notifications from database
-    const notifications = await (Notification as any).getUserNotifications(user.id, {
+    // Debug: Log user ID being used
+    console.log('Fetching notifications for user:', user._id, 'with filters:', {
       filter,
       category,
       limit,
       skip,
     });
 
+    // Get notifications from database
+    const notifications = await (Notification as any).getUserNotifications(user._id, {
+      filter,
+      category,
+      limit,
+      skip,
+    });
+
+    console.log('Found notifications:', notifications.length);
+
     // Get total count for pagination
     const totalCount = await (Notification as any).getUnreadCount(
-      user.id,
+      user._id,
       category === 'all' ? undefined : category
     );
 
+    console.log('Total count:', totalCount);
+
     // Transform to match expected format
     const transformedNotifications = notifications.map((notification: any) => ({
-      id: notification._id.toString(),
+      _id: notification._id.toString(),
+      userId: notification.userId.toString(),
       title: notification.title,
       message: notification.message,
       type: notification.type,
       category: notification.category,
       isRead: notification.isRead,
-      metadata: notification.metadata,
+      data: notification.metadata,
       createdAt: notification.createdAt.toISOString(),
-      updatedAt: notification.updatedAt.toISOString(),
     }));
 
-    logApiRequest('GET', '/api/notifications', user.id, 200, Date.now() - startTime);
+    logApiRequest('GET', '/api/notifications', user._id, 200, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
@@ -87,11 +98,11 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(request);
-    if (!authResult.success) {
+    // Authenticate user
+    const { user, error } = await authenticate(request);
+    if (error || !user) {
       return NextResponse.json(
-        { success: false, error: 'Authentication required' },
+        { success: false, error: error || 'Authentication required' },
         { status: 401 }
       );
     }
@@ -108,11 +119,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = authResult.user as { id: string };
-
     // Create notification
     const notification = await (Notification as any).createNotification(
-      user.id,
+      user._id,
       title,
       message,
       type,
@@ -120,7 +129,7 @@ export async function POST(request: NextRequest) {
       metadata
     );
 
-    logApiRequest('POST', '/api/notifications', user.id, 201, Date.now() - startTime);
+    logApiRequest('POST', '/api/notifications', user._id, 201, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,
@@ -152,11 +161,11 @@ export async function PATCH(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(request);
-    if (!authResult.success) {
+    // Authenticate user
+    const { user, error } = await authenticate(request);
+    if (error || !user) {
       return NextResponse.json(
-        { success: false, error: 'Authentication required' },
+        { success: false, error: error || 'Authentication required' },
         { status: 401 }
       );
     }
@@ -166,12 +175,10 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     const { notificationIds } = body; // Array of notification IDs to mark as read
 
-    const user = authResult.user as { id: string };
-
     // Mark notifications as read
-    await (Notification as any).markAsRead(user.id, notificationIds);
+    await (Notification as any).markAsRead(user._id, notificationIds);
 
-    logApiRequest('PATCH', '/api/notifications', user.id, 200, Date.now() - startTime);
+    logApiRequest('PATCH', '/api/notifications', user._id, 200, Date.now() - startTime);
 
     return NextResponse.json({
       success: true,

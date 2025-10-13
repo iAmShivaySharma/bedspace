@@ -7,6 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import {
+  useGetNotificationsQuery,
+  useMarkNotificationAsReadMutation,
+  useMarkAllNotificationsAsReadMutation,
+} from '@/lib/api/commonApi';
+import {
   Bell,
   Check,
   CheckCheck,
@@ -20,57 +25,37 @@ import {
   DollarSign,
 } from 'lucide-react';
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
+// Using NotificationData from commonApi types
+interface NotificationDisplay {
+  _id: string;
   type: 'info' | 'success' | 'warning' | 'error';
   category: 'booking' | 'message' | 'listing' | 'verification' | 'payment' | 'system';
-  isRead: boolean;
-  createdAt: string;
   actionUrl?: string;
 }
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
+  // RTK Query hooks
+  const {
+    data: notificationsData,
+    isLoading: loading,
+    refetch,
+  } = useGetNotificationsQuery({
+    page: 1,
+    limit: 50,
+  });
+  const [markAsReadMutation] = useMarkNotificationAsReadMutation();
+  const [markAllAsReadMutation] = useMarkAllNotificationsAsReadMutation();
 
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/notifications', {
-        credentials: 'include',
-      });
+  const notifications = notificationsData?.data || [];
 
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed fetchNotifications - handled by RTK Query
 
   const markAsRead = async (notificationId: string) => {
     try {
-      const response = await fetch(`/api/notifications/${notificationId}/read`, {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        setNotifications(prev =>
-          prev.map(notif => (notif.id === notificationId ? { ...notif, isRead: true } : notif))
-        );
-      }
+      await markAsReadMutation(notificationId).unwrap();
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
@@ -78,20 +63,15 @@ export default function NotificationsPage() {
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch('/api/notifications/mark-all-read', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (response.ok) {
-        setNotifications(prev => prev.map(notif => ({ ...notif, isRead: true })));
-      }
+      await markAllAsReadMutation().unwrap();
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
     }
   };
 
   const deleteNotification = async (notificationId: string) => {
+    // Note: No delete mutation available in commonApi yet
+    // This would need to be added to the RTK Query API
     try {
       const response = await fetch(`/api/notifications/${notificationId}`, {
         method: 'DELETE',
@@ -99,7 +79,7 @@ export default function NotificationsPage() {
       });
 
       if (response.ok) {
-        setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+        refetch(); // Refetch notifications after delete
       }
     } catch (error) {
       console.error('Failed to delete notification:', error);
@@ -139,7 +119,7 @@ export default function NotificationsPage() {
   const filteredNotifications = notifications.filter(notif => {
     if (filter === 'read' && !notif.isRead) return false;
     if (filter === 'unread' && notif.isRead) return false;
-    if (categoryFilter !== 'all' && notif.category !== categoryFilter) return false;
+    if (categoryFilter !== 'all' && (notif as any).category !== categoryFilter) return false;
     return true;
   });
 
@@ -233,12 +213,14 @@ export default function NotificationsPage() {
             </Card>
           ) : (
             filteredNotifications.map(notification => {
-              const Icon = getNotificationIcon(notification.category);
-              const colorClass = getNotificationColor(notification.type);
+              // For display, treat notification data as having category and type
+              const notificationDisplay = notification as any;
+              const Icon = getNotificationIcon(notificationDisplay.category || 'system');
+              const colorClass = getNotificationColor(notificationDisplay.type || 'info');
 
               return (
                 <Card
-                  key={notification.id}
+                  key={notification._id}
                   className={`transition-all hover:shadow-md ${
                     !notification.isRead ? 'border-l-4 border-l-blue-500 bg-blue-50/30' : ''
                   }`}
@@ -260,7 +242,7 @@ export default function NotificationsPage() {
                             <p className='text-gray-600 text-sm mt-1'>{notification.message}</p>
                             <div className='flex items-center gap-2 mt-2'>
                               <Badge variant='outline' className='text-xs capitalize'>
-                                {notification.category}
+                                {notificationDisplay.category || 'general'}
                               </Badge>
                               <span className='text-xs text-gray-500'>
                                 {new Date(notification.createdAt).toLocaleDateString('en-US', {
@@ -278,7 +260,7 @@ export default function NotificationsPage() {
                               <Button
                                 variant='ghost'
                                 size='sm'
-                                onClick={() => markAsRead(notification.id)}
+                                onClick={() => markAsRead(notification._id)}
                                 className='h-8 w-8 p-0'
                               >
                                 <Check className='h-4 w-4' />
@@ -287,7 +269,7 @@ export default function NotificationsPage() {
                             <Button
                               variant='ghost'
                               size='sm'
-                              onClick={() => deleteNotification(notification.id)}
+                              onClick={() => deleteNotification(notification._id)}
                               className='h-8 w-8 p-0 text-red-500 hover:text-red-700'
                             >
                               <Trash2 className='h-4 w-4' />

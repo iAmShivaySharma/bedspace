@@ -27,18 +27,15 @@ const ActivitySchema = new mongoose.Schema<IActivity>({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    index: true,
   },
   userRole: {
     type: String,
     enum: ['seeker', 'provider', 'admin'],
     required: true,
-    index: true,
   },
   action: {
     type: String,
     required: true,
-    index: true,
   },
   description: {
     type: String,

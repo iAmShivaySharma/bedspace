@@ -14,13 +14,11 @@ const FavoriteSchema = new Schema<IFavorite>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     listingId: {
       type: Schema.Types.ObjectId,
       ref: 'Listing',
       required: true,
-      index: true,
     },
   },
   {

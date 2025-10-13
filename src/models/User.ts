@@ -88,14 +88,12 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
     },
     phone: {
       type: String,
       sparse: true,
       unique: true,
       trim: true,
-      index: true,
     },
     password: {
       type: String,
@@ -112,13 +110,11 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: Object.values(USER_ROLES),
       required: true,
-      index: true,
     },
     avatar: String,
     isVerified: {
       type: Boolean,
       default: false,
-      index: true,
     },
     isEmailVerified: {
       type: Boolean,
@@ -153,7 +149,6 @@ const ProviderSchema = new Schema<IProvider>({
     type: String,
     enum: Object.values(VERIFICATION_STATUS),
     default: VERIFICATION_STATUS.PENDING,
-    index: true,
   },
   verificationDocuments: [VerificationDocumentSchema],
   businessName: {

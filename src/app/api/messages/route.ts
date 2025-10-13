@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAuth, AuthenticatedUser } from '@/middleware/auth';
+import { authenticate, AuthenticatedUser } from '@/middleware/auth';
 import connectDB from '@/lib/mongodb';
 import { Message, Conversation } from '@/models/Message';
 import { logApiRequest, logError } from '@/lib/logger';
@@ -8,14 +8,16 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Verify authentication
-    const authResult = await verifyAuth(request);
-    if (!authResult.success) {
+    // Authenticate user
+    const { user, error } = await authenticate(request);
+    if (error || !user) {
       logApiRequest('POST', '/api/messages', undefined, 401, Date.now() - startTime);
-      return NextResponse.json({ success: false, error: authResult.error }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: error || 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    const user = authResult.user as AuthenticatedUser;
     await connectDB();
 
     const body = await request.json();
@@ -37,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isParticipant = conversation.participants.some((p: any) => p._id.toString() === user.id);
+    const isParticipant = conversation.participants.some((p: any) => p._id.toString() === user._id);
     if (!isParticipant) {
       return NextResponse.json(
         { success: false, error: 'You are not a participant in this conversation' },
@@ -48,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Create message
     const message = new Message({
       conversationId,
-      senderId: user.id,
+      senderId: user._id,
       receiverId,
       content: content.trim(),
       messageType,
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
     // Populate sender info
     await message.populate('senderId', 'name avatar');
 
-    logApiRequest('POST', '/api/messages', user.id, 201, Date.now() - startTime);
+    logApiRequest('POST', '/api/messages', user._id, 201, Date.now() - startTime);
 
     return NextResponse.json(
       {
