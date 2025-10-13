@@ -35,6 +35,7 @@ export const bedspaceApi = createApi({
     'Profile',
     'Favorite',
     'Visit',
+    'PublicSettings',
   ],
   endpoints: () => ({}),
 });

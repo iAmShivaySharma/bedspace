@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ISettings extends Document {
   _id: string;
@@ -43,6 +43,19 @@ export interface ISettings extends Document {
   };
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Extend the Model interface to include static methods
+export interface ISettingsModel extends Model<ISettings> {
+  getSettings(): Promise<ISettings>;
+  updateSettings(updates: Partial<ISettings>): Promise<ISettings>;
+  getPublicSettings(): Promise<{
+    general: {
+      platformName: string;
+      platformDescription: string;
+    };
+    localization: ISettings['localization'];
+  }>;
 }
 
 const SettingsSchema = new Schema<ISettings>(
@@ -215,13 +228,6 @@ SettingsSchema.statics.updateSettings = async function (updates: Partial<ISettin
     await settings.save();
   }
 
-  return settings;
-};
-
-// Static method to get public settings only
-SettingsSchema.statics.getPublicSettings = async function () {
-  const settings = await this.getSettings();
-
   return {
     general: {
       platformName: settings.general.platformName,
@@ -231,6 +237,8 @@ SettingsSchema.statics.getPublicSettings = async function () {
   };
 };
 
-const Settings = mongoose.models.Settings || mongoose.model<ISettings>('Settings', SettingsSchema);
+const Settings =
+  (mongoose.models.Settings as unknown as ISettingsModel) ||
+  mongoose.model<ISettings, ISettingsModel>('Settings', SettingsSchema);
 
 export { Settings };

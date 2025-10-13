@@ -100,10 +100,11 @@ export async function PUT(request: NextRequest) {
     const updatedSettings = await (Settings as any).updateSettings(body);
 
     // Log admin activity
-    await logAdminActivity(user._id, 'settings_updated', {
-      sections: Object.keys(body),
-      changes: body,
-    });
+    await logAdminActivity(
+      user._id,
+      'settings_updated',
+      `Updated settings sections: ${Object.keys(body).join(', ')}`
+    );
 
     logApiRequest('PUT', '/api/admin/settings', user._id, 200, Date.now() - startTime);
 
