@@ -144,7 +144,7 @@ export const adminApi = bedspaceApi.injectEndpoints({
 
     getAdminProviders: builder.query<
       PaginatedResponse<User>,
-      { search?: string; page?: number; limit?: number }
+      { search?: string; page?: number; limit?: number; status?: string }
     >({
       query: (filters = {}) => {
         const params = new URLSearchParams();
@@ -153,7 +153,13 @@ export const adminApi = bedspaceApi.injectEndpoints({
         });
         return `/admin/providers?${params.toString()}`;
       },
-      providesTags: [{ type: 'AdminUser', id: 'PROVIDERS' }],
+      providesTags: result =>
+        result?.data
+          ? [
+              ...result.data.map(({ _id }) => ({ type: 'AdminUser' as const, id: _id })),
+              { type: 'AdminUser', id: 'PROVIDERS' },
+            ]
+          : [{ type: 'AdminUser', id: 'PROVIDERS' }],
     }),
 
     getAdminReports: builder.query<
@@ -181,6 +187,28 @@ export const adminApi = bedspaceApi.injectEndpoints({
         body: settings,
       }),
     }),
+
+    updateProviderVerification: builder.mutation<
+      ApiResponse<{
+        providerId: string;
+        verificationStatus: string;
+        verifiedAt?: string;
+        rejectionReason?: string;
+      }>,
+      { providerId: string; status: 'approved' | 'rejected' | 'pending'; rejectionReason?: string }
+    >({
+      query: ({ providerId, status, rejectionReason }) => ({
+        url: '/admin/providers',
+        method: 'PUT',
+        body: { providerId, status, rejectionReason },
+      }),
+      invalidatesTags: (result, error, { providerId }) => [
+        { type: 'AdminUser', id: providerId },
+        { type: 'AdminUser', id: 'LIST' },
+        { type: 'AdminUser', id: 'PROVIDERS' },
+        'AdminStats',
+      ],
+    }),
   }),
 });
 
@@ -196,4 +224,5 @@ export const {
   useGetAdminReportsQuery,
   useGetAdminSettingsQuery,
   useUpdateAdminSettingsMutation,
+  useUpdateProviderVerificationMutation,
 } = adminApi;

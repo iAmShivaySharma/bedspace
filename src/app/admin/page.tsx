@@ -4,6 +4,13 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import {
@@ -16,11 +23,17 @@ import {
   Users,
   Building,
   Calendar,
+  Phone,
+  Mail,
+  MapPin,
+  Download,
+  Loader2,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   useGetAdminStatsQuery,
   useGetAdminProvidersQuery,
-  useAdminUserActionMutation,
+  useUpdateProviderVerificationMutation,
 } from '@/lib/api/adminApi';
 import { useGetRecentActivitiesQuery } from '@/lib/api/commonApi';
 import type { Provider } from '@/types';
@@ -29,6 +42,10 @@ export default function AdminPage() {
   const [filter, setFilter] = useState('pending');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
 
   // RTK Query hooks
   const { data: statsData, isLoading: statsLoading } = useGetAdminStatsQuery();
@@ -37,12 +54,12 @@ export default function AdminPage() {
     isLoading: providersLoading,
     refetch: refetchProviders,
   } = useGetAdminProvidersQuery({
-    search: filter === 'all' ? undefined : filter,
+    status: filter === 'all' ? undefined : filter,
   });
   const { data: activitiesData, isLoading: activitiesLoading } = useGetRecentActivitiesQuery({
     limit: 10,
   });
-  const [adminUserAction] = useAdminUserActionMutation();
+  const [updateProviderVerification] = useUpdateProviderVerificationMutation();
 
   const stats = statsData?.data || {
     totalUsers: 0,
@@ -65,13 +82,39 @@ export default function AdminPage() {
     providerId: string,
     action: 'activate' | 'deactivate' | 'verify' | 'unverify'
   ) => {
+    setActionLoading(action);
     try {
-      const result = await adminUserAction({ userId: providerId, action }).unwrap();
+      // Map action to the correct status for provider verification
+      const status =
+        action === 'verify' ? 'approved' : action === 'unverify' ? 'rejected' : 'pending';
+
+      const result = await updateProviderVerification({
+        providerId,
+        status,
+        rejectionReason: action === 'unverify' ? 'Rejected by admin' : undefined,
+      }).unwrap();
+
       if (result.success) {
-        setMessage(`Provider ${action}d successfully!`);
+        setMessage(
+          `Provider ${action === 'verify' ? 'approved' : action === 'unverify' ? 'rejected' : action}d successfully!`
+        );
         setError('');
+
+        // Update selected provider status if modal is open
+        if (selectedProvider && selectedProvider._id === providerId) {
+          setSelectedProvider({
+            ...selectedProvider,
+            verificationStatus: status,
+          });
+        }
+
         // Refetch providers to update the list
         refetchProviders();
+
+        // Auto-close modal after 2 seconds to show the updated status briefly
+        setTimeout(() => {
+          handleCloseModal();
+        }, 2000);
       } else {
         setError(result.error || `Failed to ${action} provider`);
         setMessage('');
@@ -81,6 +124,35 @@ export default function AdminPage() {
         error?.data?.error || error?.message || 'Network error. Please try again.';
       setError(errorMessage);
       setMessage('');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleViewDetails = (provider: Provider) => {
+    setSelectedProvider(provider);
+    setShowDetailsModal(true);
+    // Clear any existing messages when opening modal
+    setMessage('');
+    setError('');
+  };
+
+  const handleCloseModal = () => {
+    setShowDetailsModal(false);
+    setSelectedProvider(null);
+    setMessage('');
+    setError('');
+    setActionLoading(null);
+  };
+
+  const handleFilterChange = (newFilter: string) => {
+    if (newFilter !== filter) {
+      setIsFilterLoading(true);
+      setFilter(newFilter);
+      setMessage('');
+      setError('');
+      // Reset loading after a brief delay to show the skeleton
+      setTimeout(() => setIsFilterLoading(false), 300);
     }
   };
 
@@ -201,13 +273,17 @@ export default function AdminPage() {
           {['pending', 'approved', 'rejected', 'all'].map(status => (
             <button
               key={status}
-              onClick={() => setFilter(status)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              onClick={() => handleFilterChange(status)}
+              disabled={isFilterLoading || providersLoading}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${
                 filter === status
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
-              }`}
+              } ${(isFilterLoading || providersLoading) && 'opacity-50 cursor-not-allowed'}`}
             >
+              {isFilterLoading && filter === status && (
+                <Loader2 className='w-4 h-4 mr-1 animate-spin' />
+              )}
               {status.charAt(0).toUpperCase() + status.slice(1)}
             </button>
           ))}
@@ -216,7 +292,37 @@ export default function AdminPage() {
 
       {/* Providers List */}
       <div className='grid grid-cols-1 gap-6'>
-        {providers.length === 0 ? (
+        {isFilterLoading || providersLoading ? (
+          // Skeleton loading cards
+          Array.from({ length: 3 }).map((_, index) => (
+            <Card key={index}>
+              <CardContent className='p-6'>
+                <div className='flex items-start justify-between mb-4'>
+                  <div className='flex-1'>
+                    <div className='flex items-center gap-3 mb-2'>
+                      <Skeleton className='w-10 h-10 rounded-full' />
+                      <div className='space-y-2'>
+                        <Skeleton className='h-5 w-48' />
+                        <Skeleton className='h-4 w-64' />
+                      </div>
+                    </div>
+                  </div>
+                  <Skeleton className='h-6 w-20 rounded-full' />
+                </div>
+                <div className='space-y-2 mb-4'>
+                  <Skeleton className='h-4 w-full' />
+                  <Skeleton className='h-4 w-3/4' />
+                  <Skeleton className='h-4 w-1/2' />
+                </div>
+                <div className='flex gap-2'>
+                  <Skeleton className='h-8 w-20' />
+                  <Skeleton className='h-8 w-20' />
+                  <Skeleton className='h-8 w-24' />
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        ) : providers.length === 0 ? (
           <Card>
             <CardContent className='text-center py-12'>
               <p className='text-gray-500'>No providers found for the selected filter.</p>
@@ -275,30 +381,52 @@ export default function AdminPage() {
                   )}
 
                   {/* Actions */}
-                  {provider.verificationStatus === 'pending' && (
-                    <div className='flex space-x-3 pt-4 border-t'>
-                      <Button
-                        size='sm'
-                        onClick={() => handleStatusUpdate(provider._id, 'verify')}
-                        className='bg-green-600 hover:bg-green-700'
-                      >
-                        <CheckCircle className='w-4 h-4 mr-1' />
-                        Approve
-                      </Button>
-                      <Button
-                        size='sm'
-                        variant='destructive'
-                        onClick={() => handleStatusUpdate(provider._id, 'unverify')}
-                      >
-                        <XCircle className='w-4 h-4 mr-1' />
-                        Reject
-                      </Button>
-                      <Button size='sm' variant='outline'>
-                        <Eye className='w-4 h-4 mr-1' />
-                        View Details
-                      </Button>
-                    </div>
-                  )}
+                  <div className='flex space-x-3 pt-4 border-t'>
+                    {provider.verificationStatus === 'pending' && (
+                      <>
+                        <Button
+                          size='sm'
+                          onClick={() => handleStatusUpdate(provider._id, 'verify')}
+                          className='bg-green-600 hover:bg-green-700'
+                          disabled={actionLoading === 'verify'}
+                        >
+                          {actionLoading === 'verify' ? (
+                            <>
+                              <Loader2 className='w-4 h-4 mr-1 animate-spin' />
+                              Approving...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className='w-4 h-4 mr-1' />
+                              Approve
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size='sm'
+                          variant='destructive'
+                          onClick={() => handleStatusUpdate(provider._id, 'unverify')}
+                          disabled={actionLoading === 'unverify'}
+                        >
+                          {actionLoading === 'unverify' ? (
+                            <>
+                              <Loader2 className='w-4 h-4 mr-1 animate-spin' />
+                              Rejecting...
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className='w-4 h-4 mr-1' />
+                              Reject
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                    <Button size='sm' variant='outline' onClick={() => handleViewDetails(provider)}>
+                      <Eye className='w-4 h-4 mr-1' />
+                      View Details
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -362,6 +490,234 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Provider Details Modal */}
+      <Dialog open={showDetailsModal} onOpenChange={open => !open && handleCloseModal()}>
+        <DialogContent className='max-w-4xl max-h-[90vh] overflow-y-auto'>
+          <DialogHeader>
+            <DialogTitle className='flex items-center gap-2'>
+              <User className='w-5 h-5' />
+              Provider Verification Details
+            </DialogTitle>
+            <DialogDescription>
+              Review provider information and verification documents
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedProvider && (
+            <div className='space-y-6'>
+              {/* Success/Error Messages in Modal */}
+              {message && (
+                <div className='p-4 bg-green-100 border border-green-400 text-green-700 rounded-md'>
+                  {message}
+                </div>
+              )}
+              {error && (
+                <div className='p-4 bg-red-100 border border-red-400 text-red-700 rounded-md'>
+                  {error}
+                </div>
+              )}
+              {/* Provider Basic Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className='flex items-center justify-between'>
+                    <span>Basic Information</span>
+                    <Badge className={getStatusColor(selectedProvider.verificationStatus)}>
+                      {selectedProvider.verificationStatus}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <div className='flex items-center gap-2'>
+                      <User className='w-4 h-4 text-gray-500' />
+                      <div>
+                        <p className='text-sm text-gray-600'>Full Name</p>
+                        <p className='font-medium'>{selectedProvider.name}</p>
+                      </div>
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <Mail className='w-4 h-4 text-gray-500' />
+                      <div>
+                        <p className='text-sm text-gray-600'>Email</p>
+                        <p className='font-medium'>{selectedProvider.email}</p>
+                      </div>
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <Phone className='w-4 h-4 text-gray-500' />
+                      <div>
+                        <p className='text-sm text-gray-600'>Phone</p>
+                        <p className='font-medium'>{selectedProvider.phone || 'Not provided'}</p>
+                      </div>
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <Calendar className='w-4 h-4 text-gray-500' />
+                      <div>
+                        <p className='text-sm text-gray-600'>Registration Date</p>
+                        <p className='font-medium'>
+                          {new Date(selectedProvider.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Business Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2'>
+                    <Building className='w-5 h-5' />
+                    Business Information
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <div>
+                      <p className='text-sm text-gray-600'>Business Name</p>
+                      <p className='font-medium'>
+                        {selectedProvider.businessName || 'Not provided'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className='text-sm text-gray-600'>Business Phone</p>
+                      <p className='font-medium'>
+                        {selectedProvider.businessPhone || 'Not provided'}
+                      </p>
+                    </div>
+                    <div className='md:col-span-2'>
+                      <p className='text-sm text-gray-600'>Business Address</p>
+                      <p className='font-medium'>
+                        {selectedProvider.businessAddress || 'Not provided'}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Verification Documents */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2'>
+                    <FileText className='w-5 h-5' />
+                    Verification Documents
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedProvider.verificationDocuments.length === 0 ? (
+                    <p className='text-gray-500 text-center py-4'>No documents uploaded</p>
+                  ) : (
+                    <div className='space-y-4'>
+                      {selectedProvider.verificationDocuments.map((doc, index) => (
+                        <div key={index} className='border rounded-lg p-4'>
+                          <div className='flex items-center justify-between'>
+                            <div className='flex items-center gap-3'>
+                              <FileText className='w-5 h-5 text-blue-500' />
+                              <div>
+                                <p className='font-medium'>
+                                  {doc.type
+                                    .replace('_', ' ')
+                                    .replace(/\b\w/g, l => l.toUpperCase())}
+                                </p>
+                                <p className='text-sm text-gray-600'>
+                                  Uploaded on {new Date(doc.uploadedAt).toLocaleDateString()}
+                                </p>
+                                <Badge
+                                  className={`mt-1 ${getStatusColor(doc.status)}`}
+                                  variant='outline'
+                                >
+                                  {doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className='flex gap-2'>
+                              <Button
+                                size='sm'
+                                variant='outline'
+                                onClick={() => window.open(doc.fileUrl, '_blank')}
+                              >
+                                <Eye className='w-4 h-4 mr-1' />
+                                View
+                              </Button>
+                              <Button
+                                size='sm'
+                                variant='outline'
+                                onClick={() => {
+                                  const link = document.createElement('a');
+                                  link.href = doc.fileUrl;
+                                  link.download = doc.fileName;
+                                  link.click();
+                                }}
+                              >
+                                <Download className='w-4 h-4 mr-1' />
+                                Download
+                              </Button>
+                            </div>
+                          </div>
+                          {doc.rejectionReason && (
+                            <div className='mt-3 p-3 bg-red-50 border border-red-200 rounded'>
+                              <p className='text-sm text-red-800'>
+                                <strong>Rejection Reason:</strong> {doc.rejectionReason}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              {selectedProvider.verificationStatus === 'pending' && (
+                <div className='flex justify-end gap-3 pt-4 border-t'>
+                  <Button
+                    variant='outline'
+                    onClick={handleCloseModal}
+                    disabled={actionLoading !== null}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant='destructive'
+                    onClick={() => handleStatusUpdate(selectedProvider._id, 'unverify')}
+                    disabled={actionLoading !== null}
+                  >
+                    {actionLoading === 'unverify' ? (
+                      <>
+                        <Loader2 className='w-4 h-4 mr-1 animate-spin' />
+                        Rejecting...
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className='w-4 h-4 mr-1' />
+                        Reject
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    className='bg-green-600 hover:bg-green-700'
+                    onClick={() => handleStatusUpdate(selectedProvider._id, 'verify')}
+                    disabled={actionLoading !== null}
+                  >
+                    {actionLoading === 'verify' ? (
+                      <>
+                        <Loader2 className='w-4 h-4 mr-1 animate-spin' />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className='w-4 h-4 mr-1' />
+                        Approve
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

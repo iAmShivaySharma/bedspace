@@ -12,6 +12,9 @@ interface SeekerStats {
   totalBookings: number;
   activeBookings: number;
   favorites: number;
+  savedListings: number;
+  messages: number;
+  searchAlerts: number;
   recentActivities: number;
 }
 

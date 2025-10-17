@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { providerVerificationSchema } from '@/utils/validation';
@@ -13,6 +12,11 @@ import DocumentUpload from '@/components/ui/document-upload';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { PageSkeleton } from '@/components/ui/page-skeleton';
 import { Upload, FileText, CheckCircle, XCircle, Clock, AlertCircle, Shield } from 'lucide-react';
+import {
+  useGetVerificationStatusQuery,
+  useUpdateVerificationInfoMutation,
+  useSaveVerificationDocumentMutation,
+} from '@/lib/api/providerApi';
 
 interface VerificationData {
   verificationStatus: string;
@@ -30,76 +34,57 @@ interface FormData {
 }
 
 export default function ProviderVerificationPage() {
-  const [verificationData, setVerificationData] = useState<VerificationData | null>(null);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
+
+  // RTK Query hooks
+  const {
+    data: verificationData,
+    isLoading: loading,
+    refetch: refetchVerification,
+  } = useGetVerificationStatusQuery();
+  const [updateVerificationInfo] = useUpdateVerificationInfoMutation();
+  const [saveVerificationDocument] = useSaveVerificationDocumentMutation();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     setValue,
+    reset,
   } = useForm<FormData>({
     resolver: zodResolver(providerVerificationSchema),
+    defaultValues: {
+      businessName: verificationData?.data?.businessName || '',
+      businessAddress: verificationData?.data?.businessAddress || '',
+      businessPhone: verificationData?.data?.businessPhone || '',
+    },
   });
 
-  useEffect(() => {
-    const fetchVerificationData = async () => {
-      try {
-        const response = await fetch('/api/providers/verification', {
-          credentials: 'include',
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          setVerificationData(result.data);
-
-          // Pre-fill form with existing data
-          if (result.data.businessName) setValue('businessName', result.data.businessName);
-          if (result.data.businessAddress) setValue('businessAddress', result.data.businessAddress);
-          if (result.data.businessPhone) setValue('businessPhone', result.data.businessPhone);
-        } else {
-          const result = await response.json();
-          setError(result.error || 'Failed to fetch verification data');
-        }
-      } catch (error) {
-        console.error('Error fetching verification data:', error);
-        setError('Network error. Please try again.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVerificationData();
-  }, [router, setValue]);
+  // Update form when verification data loads
+  if (verificationData?.data && !loading) {
+    const data = verificationData.data;
+    setValue('businessName', data.businessName || '');
+    setValue('businessAddress', data.businessAddress || '');
+    setValue('businessPhone', data.businessPhone || '');
+  }
 
   const onSubmit = async (data: FormData) => {
     try {
-      const response = await fetch('/api/providers/verification', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
+      const result = await updateVerificationInfo(data).unwrap();
       if (result.success) {
         setMessage('Business information updated successfully!');
         setError('');
-        // Refresh verification data
-        setVerificationData(prev => (prev ? { ...prev, ...data } : null));
+        refetchVerification();
       } else {
         setError(result.error || 'Failed to update business information');
         setMessage('');
       }
-    } catch (error) {
-      setError('Network error. Please try again.');
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.error || error?.message || 'Network error. Please try again.';
+      setError(errorMessage);
       setMessage('');
     }
   };
@@ -108,39 +93,23 @@ export default function ProviderVerificationPage() {
     if (urls.length === 0) return;
 
     try {
-      // Save the document URL to the backend
-      const response = await fetch('/api/providers/verification-documents', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          type: documentType,
-          url: urls[0], // Take first URL since we only upload one document per type
-        }),
-      });
-
-      const result = await response.json();
+      const result = await saveVerificationDocument({
+        type: documentType,
+        url: urls[0], // Take first URL since we only upload one document per type
+      }).unwrap();
 
       if (result.success) {
         setMessage('Document uploaded successfully!');
         setError('');
-        // Refresh verification data
-        const updatedData = { ...verificationData! };
-        updatedData.verificationDocuments = updatedData.verificationDocuments.filter(
-          doc => doc.type !== documentType
-        );
-        updatedData.verificationDocuments.push(result.data.document);
-        updatedData.verificationStatus = result.data.verificationStatus;
-        setVerificationData(updatedData);
+        refetchVerification();
       } else {
         setError(result.error || 'Failed to save document');
         setMessage('');
       }
-    } catch (error) {
-      setError('Network error. Please try again.');
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.error || error?.message || 'Network error. Please try again.';
+      setError(errorMessage);
       setMessage('');
     }
   };
@@ -199,27 +168,27 @@ export default function ProviderVerificationPage() {
         )}
 
         {/* Verification Status */}
-        {verificationData && (
+        {verificationData?.data && (
           <Card className='mb-8'>
             <CardHeader>
               <CardTitle className='flex items-center space-x-2'>
-                {getStatusIcon(verificationData.verificationStatus)}
+                {getStatusIcon(verificationData.data.verificationStatus)}
                 <span>Verification Status</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className='flex items-center space-x-3'>
                 <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(verificationData.verificationStatus)}`}
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(verificationData.data.verificationStatus)}`}
                 >
-                  {verificationData.verificationStatus.charAt(0).toUpperCase() +
-                    verificationData.verificationStatus.slice(1)}
+                  {verificationData.data.verificationStatus.charAt(0).toUpperCase() +
+                    verificationData.data.verificationStatus.slice(1)}
                 </span>
-                {verificationData.verificationStatus === 'rejected' &&
-                  verificationData.rejectionReason && (
+                {verificationData.data.verificationStatus === 'rejected' &&
+                  verificationData.data.rejectionReason && (
                     <div className='flex items-center space-x-2 text-red-600'>
                       <AlertCircle className='w-4 h-4' />
-                      <span className='text-sm'>{verificationData.rejectionReason}</span>
+                      <span className='text-sm'>{verificationData.data.rejectionReason}</span>
                     </div>
                   )}
               </div>
@@ -299,7 +268,7 @@ export default function ProviderVerificationPage() {
                   { type: 'address_proof', label: 'Address Proof', required: true },
                   { type: 'business_license', label: 'Business License', required: false },
                 ].map(({ type, label, required }) => {
-                  const existingDoc = verificationData?.verificationDocuments.find(
+                  const existingDoc = verificationData?.data?.verificationDocuments.find(
                     doc => doc.type === type
                   );
 
@@ -329,13 +298,11 @@ export default function ProviderVerificationPage() {
                                   existingDoc.status.slice(1)}
                               </span>
                             </div>
-                            {(existingDoc.url || existingDoc.fileUrl) && (
+                            {existingDoc.fileUrl && (
                               <Button
                                 variant='outline'
                                 size='sm'
-                                onClick={() =>
-                                  window.open(existingDoc.url || existingDoc.fileUrl, '_blank')
-                                }
+                                onClick={() => window.open(existingDoc.fileUrl, '_blank')}
                               >
                                 View
                               </Button>

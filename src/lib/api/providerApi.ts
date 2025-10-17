@@ -44,11 +44,25 @@ interface BookingResponsePayload {
 }
 
 interface VerificationStatus {
-  status: 'pending' | 'approved' | 'rejected';
-  documents: VerificationDocument[];
+  verificationStatus: 'pending' | 'approved' | 'rejected';
+  verificationDocuments: VerificationDocument[];
+  businessName?: string;
+  businessAddress?: string;
+  businessPhone?: string;
   submittedAt?: string;
   reviewedAt?: string;
   rejectionReason?: string;
+}
+
+interface UpdateVerificationPayload {
+  businessName?: string;
+  businessAddress?: string;
+  businessPhone?: string;
+}
+
+interface SaveDocumentPayload {
+  type: string;
+  url: string;
 }
 
 export const providerApi = bedspaceApi.injectEndpoints({
@@ -170,6 +184,24 @@ export const providerApi = bedspaceApi.injectEndpoints({
     getVerificationDocuments: builder.query<ApiResponse<VerificationDocument[]>, void>({
       query: () => '/providers/verification-documents',
       providesTags: ['ProviderVerification'],
+    }),
+
+    updateVerificationInfo: builder.mutation<ApiResponse, UpdateVerificationPayload>({
+      query: verificationData => ({
+        url: '/providers/verification',
+        method: 'PUT',
+        body: verificationData,
+      }),
+      invalidatesTags: ['ProviderVerification', 'User'],
+    }),
+
+    saveVerificationDocument: builder.mutation<ApiResponse, SaveDocumentPayload>({
+      query: documentData => ({
+        url: '/providers/verification-documents',
+        method: 'POST',
+        body: documentData,
+      }),
+      invalidatesTags: ['ProviderVerification', 'User'],
     }),
 
     uploadVerificationDocuments: builder.mutation<ApiResponse<VerificationDocument[]>, FormData>({
@@ -295,6 +327,8 @@ export const {
   useRespondToBookingMutation,
   useGetVerificationStatusQuery,
   useGetVerificationDocumentsQuery,
+  useUpdateVerificationInfoMutation,
+  useSaveVerificationDocumentMutation,
   useUploadVerificationDocumentsMutation,
   useSubmitForVerificationMutation,
   useUploadListingImagesMutation,

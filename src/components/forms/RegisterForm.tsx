@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PhoneInput } from '@/components/ui/phone-input';
 import { USER_ROLES } from '@/constants';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useRegisterMutation } from '@/lib/api/authApi';
 
 interface RegisterFormData {
   name: string;
@@ -26,8 +27,10 @@ interface RegisterFormProps {
 }
 
 export default function RegisterForm({ onSuccess, onError }: RegisterFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // RTK Query hook
+  const [registerUser, { isLoading }] = useRegisterMutation();
 
   const {
     register,
@@ -45,7 +48,6 @@ export default function RegisterForm({ onSuccess, onError }: RegisterFormProps) 
   const selectedRole = watch('role');
 
   const onSubmit = async (data: RegisterFormData) => {
-    setIsLoading(true);
     try {
       // Sanitize inputs before sending
       const sanitizedData = {
@@ -55,25 +57,16 @@ export default function RegisterForm({ onSuccess, onError }: RegisterFormProps) 
         phone: sanitizeInput(data.phone),
       };
 
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sanitizedData),
-      });
-
-      const result = await response.json();
-
+      const result = await registerUser(sanitizedData).unwrap();
       if (result.success) {
         onSuccess(result.data);
       } else {
         onError(result.error || 'Registration failed');
       }
-    } catch (error) {
-      onError('Network error. Please try again.');
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.error || error?.message || 'Network error. Please try again.';
+      onError(errorMessage);
     }
   };
 
