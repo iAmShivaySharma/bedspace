@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { registerSchema } from '@/utils/validation';
+import { registerSchema, sanitizeInput } from '@/utils/validation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -47,12 +47,20 @@ export default function RegisterForm({ onSuccess, onError }: RegisterFormProps) 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
+      // Sanitize inputs before sending
+      const sanitizedData = {
+        ...data,
+        name: sanitizeInput(data.name),
+        email: sanitizeInput(data.email.toLowerCase()),
+        phone: sanitizeInput(data.phone),
+      };
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(sanitizedData),
       });
 
       const result = await response.json();

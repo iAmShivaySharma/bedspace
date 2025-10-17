@@ -137,9 +137,18 @@ export default function OTPVerificationForm({
               {...register('otp')}
               className={`text-center text-lg tracking-widest ${errors.otp ? 'border-red-500' : ''}`}
               onChange={e => {
-                // Only allow numbers
-                const value = e.target.value.replace(/\D/g, '');
+                // Only allow numbers and limit to 6 digits
+                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                 setValue('otp', value);
+                e.target.value = value;
+              }}
+              onPaste={e => {
+                // Prevent pasting non-numeric content
+                e.preventDefault();
+                const paste = e.clipboardData?.getData('text') || '';
+                const numericValue = paste.replace(/\D/g, '').slice(0, 6);
+                setValue('otp', numericValue);
+                e.currentTarget.value = numericValue;
               }}
             />
             {errors.otp && <p className='text-sm text-red-500'>{errors.otp.message}</p>}

@@ -34,24 +34,19 @@ export async function POST(request: NextRequest) {
     const isEmail = identifier.includes('@');
     const user = await User.findOne(isEmail ? { email: identifier } : { phone: identifier });
 
-    if (!user) {
+    // Always return success to prevent user enumeration
+    // But only send email if user exists and needs verification
+    if (!user || user.isEmailVerified) {
       return NextResponse.json(
         {
-          success: false,
-          error: 'User not found',
+          success: true,
+          message: 'If the email exists and needs verification, an OTP has been sent.',
+          data: {
+            email: identifier,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          },
         },
-        { status: 404 }
-      );
-    }
-
-    // Check if email is already verified
-    if (user.isEmailVerified) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Email is already verified',
-        },
-        { status: 400 }
+        { status: 200 }
       );
     }
 

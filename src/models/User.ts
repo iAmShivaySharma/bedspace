@@ -19,6 +19,10 @@ export interface IUser extends Document {
   resetPasswordExpiry?: Date;
   lastLogin?: Date;
   favorites?: mongoose.Types.ObjectId[];
+  failedOtpAttempts?: number;
+  otpLockoutUntil?: Date;
+  failedLoginAttempts?: number;
+  loginLockoutUntil?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -136,6 +140,16 @@ const UserSchema = new Schema<IUser>(
         ref: 'Listing',
       },
     ],
+    failedOtpAttempts: {
+      type: Number,
+      default: 0,
+    },
+    otpLockoutUntil: Date,
+    failedLoginAttempts: {
+      type: Number,
+      default: 0,
+    },
+    loginLockoutUntil: Date,
   },
   {
     timestamps: true,

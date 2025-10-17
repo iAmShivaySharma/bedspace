@@ -237,7 +237,7 @@ export default function ProviderVerificationPage() {
             <CardContent>
               <form onSubmit={handleSubmit(onSubmit)} className='space-y-4'>
                 <div className='space-y-2'>
-                  <Label htmlFor='businessName'>Business Name (Optional)</Label>
+                  <Label htmlFor='businessName'>Bedspace Name (Optional)</Label>
                   <Input
                     id='businessName'
                     type='text'
@@ -251,7 +251,7 @@ export default function ProviderVerificationPage() {
                 </div>
 
                 <div className='space-y-2'>
-                  <Label htmlFor='businessAddress'>Business Address (Optional)</Label>
+                  <Label htmlFor='businessAddress'>Bedspace Address (Optional)</Label>
                   <Input
                     id='businessAddress'
                     type='text'
