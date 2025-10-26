@@ -4,6 +4,7 @@ import connectDB from '@/lib/mongodb';
 import { BookingRequest } from '@/models/Booking';
 import { Listing } from '@/models/Listing';
 import { StripeAccount, PaymentIntent } from '@/models/StripePayment';
+import { Settings } from '@/models/Settings';
 import { stripeHelpers } from '@/lib/stripe';
 import logger from '@/lib/logger';
 
@@ -65,12 +66,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get platform commission from settings
+    const settings = await (Settings as any).getSettings();
+    const commissionPercentage = settings.booking?.bookingFee || 3;
+
     // Calculate amounts
     const monthlyRent = listing.rent;
     const securityDeposit = listing.securityDeposit || monthlyRent;
     const totalRent = monthlyRent * duration;
     const totalAmount = totalRent + securityDeposit;
-    const applicationFeeAmount = stripeHelpers.calculateApplicationFee(totalAmount);
+    const applicationFeeAmount = stripeHelpers.calculateApplicationFee(
+      totalAmount,
+      commissionPercentage
+    );
 
     // Check for existing pending booking
     const existingBooking = await BookingRequest.findOne({

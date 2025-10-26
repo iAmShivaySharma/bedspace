@@ -211,22 +211,29 @@ SettingsSchema.statics.updateSettings = async function (updates: Partial<ISettin
   } else {
     // Deep merge updates
     Object.keys(updates).forEach(key => {
-      if (key !== '_id' && key !== 'createdAt' && key !== 'updatedAt') {
+      if (key !== '_id' && key !== 'createdAt' && key !== 'updatedAt' && settings) {
         if (
           typeof updates[key as keyof ISettings] === 'object' &&
           updates[key as keyof ISettings] !== null
         ) {
-          settings[key as keyof ISettings] = {
-            ...settings[key as keyof ISettings],
+          (settings as any)[key] = {
+            ...(settings as any)[key],
             ...updates[key as keyof ISettings],
           };
         } else {
-          settings[key as keyof ISettings] = updates[key as keyof ISettings];
+          (settings as any)[key] = updates[key as keyof ISettings];
         }
       }
     });
     await settings.save();
   }
+
+  return settings;
+};
+
+// Static method to get public settings (non-sensitive data)
+SettingsSchema.statics.getPublicSettings = async function () {
+  const settings = await (this as ISettingsModel).getSettings();
 
   return {
     general: {

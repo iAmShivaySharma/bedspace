@@ -7,14 +7,20 @@ import { stripeHelpers } from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check provider verification
-    const verificationError = await requireProviderVerification(request);
-    if (verificationError) return verificationError;
+    // Get authenticated user (no verification required for Stripe setup)
+    const { user, error } = await authenticate(request);
+    if (error || !user) {
+      return NextResponse.json(
+        { success: false, error: error || 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
-    // Get authenticated user
-    const { user } = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    if (user.role !== 'provider') {
+      return NextResponse.json(
+        { success: false, error: 'Provider access required' },
+        { status: 403 }
+      );
     }
 
     await connectDB();
@@ -32,8 +38,10 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      console.log('Creating Stripe connected account for user:', user._id, user.email);
       // Create Stripe connected account
       const stripeAccount = await stripeHelpers.createConnectedAccount(user._id, user.email, 'IN');
+      console.log('Stripe account created:', stripeAccount.id);
 
       // Save account to database
       const newStripeAccount = new StripeAccount({
@@ -54,14 +62,18 @@ export async function POST(request: NextRequest) {
       await newStripeAccount.save();
 
       // Create onboarding link
-      const refreshUrl = `${process.env.NEXTAUTH_URL}/provider/payments/setup?refresh=true`;
-      const returnUrl = `${process.env.NEXTAUTH_URL}/provider/payments?setup=complete`;
+      const baseUrl =
+        process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const refreshUrl = `${baseUrl}/provider/payments/setup?refresh=true`;
+      const returnUrl = `${baseUrl}/provider/payments?setup=complete`;
 
       const accountLink = await stripeHelpers.createAccountLink(
         stripeAccount.id,
         refreshUrl,
         returnUrl
       );
+
+      console.log('Stripe onboarding link created:', accountLink.url);
 
       return NextResponse.json({
         success: true,
@@ -92,14 +104,20 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Check provider verification
-    const verificationError = await requireProviderVerification(request);
-    if (verificationError) return verificationError;
+    // Get authenticated user (no verification required for Stripe setup)
+    const { user, error } = await authenticate(request);
+    if (error || !user) {
+      return NextResponse.json(
+        { success: false, error: error || 'Authentication required' },
+        { status: 401 }
+      );
+    }
 
-    // Get authenticated user
-    const { user } = await authenticate(request);
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    if (user.role !== 'provider') {
+      return NextResponse.json(
+        { success: false, error: 'Provider access required' },
+        { status: 403 }
+      );
     }
 
     await connectDB();
