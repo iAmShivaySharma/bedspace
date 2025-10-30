@@ -23,7 +23,6 @@ const NotificationSchema = new Schema<INotification>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     title: {
       type: String,
@@ -47,12 +46,10 @@ const NotificationSchema = new Schema<INotification>(
       type: String,
       enum: ['system', 'verification', 'message', 'listing', 'booking', 'payment'],
       required: true,
-      index: true,
     },
     isRead: {
       type: Boolean,
       default: false,
-      index: true,
     },
     metadata: {
       entityId: String,

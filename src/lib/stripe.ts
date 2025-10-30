@@ -136,9 +136,11 @@ export const stripeHelpers = {
     return await stripe.paymentIntents.cancel(paymentIntentId);
   },
 
-  // Calculate application fee (platform fee)
-  calculateApplicationFee: (amount: number, feePercentage: number = 3) => {
-    return Math.round((amount * feePercentage) / 100);
+  // Calculate application fee (platform fee) - now supports dynamic commission
+  calculateApplicationFee: (amount: number, feePercentage?: number) => {
+    // If no fee percentage provided, it will be fetched from settings in the calling function
+    const fee = feePercentage ?? 3; // Fallback to 3% if not provided
+    return Math.round((amount * fee) / 100);
   },
 
   // Convert amount to Stripe format (smallest currency unit)

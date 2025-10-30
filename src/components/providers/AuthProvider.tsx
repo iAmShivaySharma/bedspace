@@ -21,7 +21,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isError,
     error,
   } = useGetCurrentUserQuery(undefined, {
-    skip: false, // Always try to fetch user on app load
+    skip: false,
   });
 
   useEffect(() => {

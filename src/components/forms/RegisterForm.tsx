@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { registerSchema } from '@/utils/validation';
+import { registerSchema, sanitizeInput } from '@/utils/validation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PhoneInput } from '@/components/ui/phone-input';
 import { USER_ROLES } from '@/constants';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useRegisterMutation } from '@/lib/api/authApi';
 
 interface RegisterFormData {
   name: string;
@@ -26,8 +27,10 @@ interface RegisterFormProps {
 }
 
 export default function RegisterForm({ onSuccess, onError }: RegisterFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // RTK Query hook
+  const [registerUser, { isLoading }] = useRegisterMutation();
 
   const {
     register,
@@ -45,27 +48,25 @@ export default function RegisterForm({ onSuccess, onError }: RegisterFormProps) 
   const selectedRole = watch('role');
 
   const onSubmit = async (data: RegisterFormData) => {
-    setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
+      // Sanitize inputs before sending
+      const sanitizedData = {
+        ...data,
+        name: sanitizeInput(data.name),
+        email: sanitizeInput(data.email.toLowerCase()),
+        phone: sanitizeInput(data.phone),
+      };
 
-      const result = await response.json();
-
+      const result = await registerUser(sanitizedData).unwrap();
       if (result.success) {
         onSuccess(result.data);
       } else {
         onError(result.error || 'Registration failed');
       }
-    } catch (error) {
-      onError('Network error. Please try again.');
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.error || error?.message || 'Network error. Please try again.';
+      onError(errorMessage);
     }
   };
 

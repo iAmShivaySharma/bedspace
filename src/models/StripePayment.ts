@@ -83,7 +83,6 @@ const StripeAccountSchema = new Schema<IStripeAccount>(
       ref: 'User',
       required: true,
       unique: true,
-      index: true,
     },
     stripeAccountId: {
       type: String,
@@ -175,7 +174,6 @@ const PaymentIntentSchema = new Schema<IPaymentIntent>(
         'canceled',
       ],
       required: true,
-      index: true,
     },
     paymentType: {
       type: String,
@@ -217,7 +215,6 @@ const TransferSchema = new Schema<ITransfer>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     paymentIntentId: {
       type: Schema.Types.ObjectId,
@@ -237,7 +234,6 @@ const TransferSchema = new Schema<ITransfer>(
       type: String,
       enum: ['pending', 'paid', 'failed', 'canceled', 'in_transit'],
       required: true,
-      index: true,
     },
     destination: {
       type: String,
@@ -265,7 +261,6 @@ const PayoutSchema = new Schema<IPayout>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     amount: {
       type: Number,
@@ -280,7 +275,6 @@ const PayoutSchema = new Schema<IPayout>(
       type: String,
       enum: ['pending', 'in_transit', 'paid', 'failed', 'canceled'],
       required: true,
-      index: true,
     },
     method: {
       type: String,

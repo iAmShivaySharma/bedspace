@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,7 +12,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Menu, User, Settings, LogOut, Bell, Shield } from 'lucide-react';
+import { Menu, User, Settings, LogOut, Shield } from 'lucide-react';
+import NotificationDropdown from '@/components/ui/NotificationDropdown';
+import { useGetUnreadNotificationCountQuery } from '@/lib/api/commonApi';
 
 interface User {
   _id: string;
@@ -31,28 +33,13 @@ interface DashboardHeaderProps {
 
 export default function DashboardHeader({ user, onMenuToggle, title }: DashboardHeaderProps) {
   const router = useRouter();
-  const [notifications, setNotifications] = useState(0);
 
-  // Fetch live notification count
-  useEffect(() => {
-    const fetchCounts = async () => {
-      try {
-        // Fetch notifications count (token now in cookie)
-        const notifResponse = await fetch('/api/notifications/count');
-        if (notifResponse.ok) {
-          const notifData = await notifResponse.json();
-          setNotifications(notifData.data?.count || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching counts:', error);
-      }
-    };
+  // Use RTK Query for notification count
+  const { data: notificationCountData } = useGetUnreadNotificationCountQuery(undefined, {
+    pollingInterval: 30000, // Poll every 30 seconds
+  });
 
-    fetchCounts();
-    // Refresh counts every 30 seconds
-    const interval = setInterval(fetchCounts, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const notificationCount = notificationCountData?.data?.count || 0;
 
   const handleLogout = async () => {
     try {
@@ -130,19 +117,7 @@ export default function DashboardHeader({ user, onMenuToggle, title }: Dashboard
       {/* Right side - Notifications and User Menu */}
       <div className='flex items-center space-x-3'>
         {/* Notifications */}
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={() => router.push('/notifications')}
-          className='relative'
-        >
-          <Bell className='h-5 w-5' />
-          {notifications > 0 && (
-            <span className='absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center'>
-              {notifications > 9 ? '9+' : notifications}
-            </span>
-          )}
-        </Button>
+        <NotificationDropdown notificationCount={notificationCount} />
 
         {/* User Menu */}
         <DropdownMenu>

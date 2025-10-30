@@ -7,7 +7,13 @@ export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().regex(/^\+\d{1,4}\d{6,14}$/, 'Invalid phone number format'),
   role: z.enum([USER_ROLES.SEEKER, USER_ROLES.PROVIDER]),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z
+    .string()
+    .min(8, 'Password must be at least 8 characters')
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
+      'Password must contain at least: 1 lowercase letter, 1 uppercase letter, 1 number, and 1 special character'
+    ),
 });
 
 export const loginSchema = z.object({

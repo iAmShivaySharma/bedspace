@@ -17,6 +17,7 @@ import {
   useSetupStripeAccountMutation,
   useRequestPayoutMutation,
 } from '@/lib/api/providerApi';
+import { useGetAdminSettingsQuery } from '@/lib/api/adminApi';
 import {
   CreditCard,
   DollarSign,
@@ -45,6 +46,7 @@ export default function ProviderPaymentsPage() {
     type: 'summary',
   });
   const { data: transactionsResponse } = useGetPaymentDataQuery({ type: 'transactions' });
+  const { data: settingsResponse } = useGetAdminSettingsQuery();
 
   const [setupStripeAccount, { isLoading: settingUpAccount }] = useSetupStripeAccountMutation();
   const [requestPayout, { isLoading: requestingPayout }] = useRequestPayoutMutation();
@@ -53,6 +55,8 @@ export default function ProviderPaymentsPage() {
   const stripeAccount = stripeAccountResponse?.data;
   const paymentData = paymentDataResponse?.data;
   const transactions = transactionsResponse?.data;
+  const settings = settingsResponse?.data;
+  const platformFee = settings?.booking?.bookingFee || 3;
 
   if (!user || user.role !== 'provider') {
     router.push('/dashboard');
@@ -74,12 +78,21 @@ export default function ProviderPaymentsPage() {
 
   const handleSetupStripe = async () => {
     try {
+      console.log('Starting Stripe account setup...');
       const result = await setupStripeAccount().unwrap();
-      if (result.data?.onboardingUrl) {
+      console.log('Stripe setup result:', result);
+
+      if (result.success && result.data?.onboardingUrl) {
+        console.log('Opening Stripe onboarding URL:', result.data.onboardingUrl);
         window.open(result.data.onboardingUrl, '_blank');
+      } else {
+        console.error('No onboarding URL received:', result);
+        alert('Failed to get Stripe onboarding URL. Please try again.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to setup Stripe account:', error);
+      const errorMessage = error?.data?.error || error?.message || 'Unknown error occurred';
+      alert(`Failed to setup Stripe account: ${errorMessage}`);
     }
   };
 
@@ -258,61 +271,128 @@ export default function ProviderPaymentsPage() {
         {/* Payment Stats Cards */}
         <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6'>
           {/* Available Balance */}
-          <Card>
+          <Card className='hover:shadow-md transition-shadow'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-sm font-medium'>Available Balance</CardTitle>
-              <Wallet className='h-4 w-4 text-muted-foreground' />
+              <Wallet className='h-4 w-4 text-green-600' />
             </CardHeader>
             <CardContent>
               <div className='text-2xl font-bold text-green-600'>
                 ₹{(paymentData?.balance?.available || 0).toLocaleString()}
               </div>
               <p className='text-xs text-muted-foreground'>Ready for withdrawal</p>
+              {(paymentData?.balance?.available || 0) > 0 && (
+                <div className='mt-2'>
+                  <Badge variant='outline' className='text-green-700 border-green-200'>
+                    Withdraw Available
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
 
           {/* Monthly Earnings */}
-          <Card>
+          <Card className='hover:shadow-md transition-shadow'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-sm font-medium'>This Month</CardTitle>
-              <TrendingUp className='h-4 w-4 text-muted-foreground' />
+              <TrendingUp className='h-4 w-4 text-blue-600' />
             </CardHeader>
             <CardContent>
               <div className='text-2xl font-bold'>
                 ₹{(paymentData?.earnings?.thisMonth || 0).toLocaleString()}
               </div>
               <p className='text-xs text-muted-foreground'>Monthly earnings</p>
+              <div className='mt-2 text-xs text-blue-600'>After {platformFee}% platform fee</div>
             </CardContent>
           </Card>
 
           {/* Pending Payments */}
-          <Card>
+          <Card className='hover:shadow-md transition-shadow'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-sm font-medium'>Pending</CardTitle>
-              <Clock className='h-4 w-4 text-muted-foreground' />
+              <Clock className='h-4 w-4 text-yellow-600' />
             </CardHeader>
             <CardContent>
               <div className='text-2xl font-bold text-yellow-600'>
                 ₹{(paymentData?.balance?.pending || 0).toLocaleString()}
               </div>
               <p className='text-xs text-muted-foreground'>Processing payments</p>
+              {(paymentData?.balance?.pending || 0) > 0 && (
+                <div className='mt-2 text-xs text-yellow-700'>Expected in 2-3 business days</div>
+              )}
             </CardContent>
           </Card>
 
           {/* Total Earnings */}
-          <Card>
+          <Card className='hover:shadow-md transition-shadow'>
             <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
               <CardTitle className='text-sm font-medium'>Total Earnings</CardTitle>
-              <DollarSign className='h-4 w-4 text-muted-foreground' />
+              <DollarSign className='h-4 w-4 text-purple-600' />
             </CardHeader>
             <CardContent>
               <div className='text-2xl font-bold'>
                 ₹{(paymentData?.earnings?.total || 0).toLocaleString()}
               </div>
               <p className='text-xs text-muted-foreground'>All-time earnings</p>
+              <div className='mt-2 text-xs text-purple-600'>
+                Platform fee deducted: ₹
+                {Math.round(
+                  ((paymentData?.earnings?.total || 0) * platformFee) / (100 - platformFee)
+                ).toLocaleString()}
+              </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Earnings Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Earnings Breakdown</CardTitle>
+            <CardDescription>Detailed view of your earnings and fees</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+              <div className='p-4 bg-green-50 rounded-lg border border-green-200'>
+                <div className='flex items-center justify-between mb-2'>
+                  <span className='text-sm font-medium text-green-900'>Gross Earnings</span>
+                  <TrendingUp className='w-4 h-4 text-green-600' />
+                </div>
+                <div className='text-xl font-bold text-green-700'>
+                  ₹
+                  {Math.round(
+                    (paymentData?.earnings?.total || 0) / (1 - platformFee / 100)
+                  ).toLocaleString()}
+                </div>
+                <p className='text-xs text-green-600'>Before platform fees</p>
+              </div>
+
+              <div className='p-4 bg-yellow-50 rounded-lg border border-yellow-200'>
+                <div className='flex items-center justify-between mb-2'>
+                  <span className='text-sm font-medium text-yellow-900'>Platform Fees</span>
+                  <DollarSign className='w-4 h-4 text-yellow-600' />
+                </div>
+                <div className='text-xl font-bold text-yellow-700'>
+                  ₹
+                  {Math.round(
+                    ((paymentData?.earnings?.total || 0) * platformFee) / (100 - platformFee)
+                  ).toLocaleString()}
+                </div>
+                <p className='text-xs text-yellow-600'>{platformFee}% service fee</p>
+              </div>
+
+              <div className='p-4 bg-blue-50 rounded-lg border border-blue-200'>
+                <div className='flex items-center justify-between mb-2'>
+                  <span className='text-sm font-medium text-blue-900'>Net Earnings</span>
+                  <Wallet className='w-4 h-4 text-blue-600' />
+                </div>
+                <div className='text-xl font-bold text-blue-700'>
+                  ₹{(paymentData?.earnings?.total || 0).toLocaleString()}
+                </div>
+                <p className='text-xs text-blue-600'>After fees deducted</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card>
@@ -322,13 +402,28 @@ export default function ProviderPaymentsPage() {
           </CardHeader>
           <CardContent>
             <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              <button className='p-4 border border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors text-left'>
+              <button
+                className='p-4 border border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed'
+                disabled={(paymentData?.balance?.available || 0) <= 0}
+                onClick={() => {
+                  if ((paymentData?.balance?.available || 0) > 0) {
+                    setPayoutAmount(paymentData?.balance?.available?.toString() || '');
+                  }
+                }}
+              >
                 <Wallet className='w-8 h-8 text-green-600 mb-2' />
                 <h4 className='font-medium text-gray-900 mb-1'>Request Payout</h4>
-                <p className='text-sm text-gray-500'>Withdraw available balance</p>
+                <p className='text-sm text-gray-500'>
+                  {(paymentData?.balance?.available || 0) > 0
+                    ? `Withdraw ₹${(paymentData?.balance?.available || 0).toLocaleString()}`
+                    : 'No funds available'}
+                </p>
               </button>
 
-              <button className='p-4 border border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left'>
+              <button
+                className='p-4 border border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-left'
+                onClick={handleSetupStripe}
+              >
                 <CreditCard className='w-8 h-8 text-blue-600 mb-2' />
                 <h4 className='font-medium text-gray-900 mb-1'>Payment Settings</h4>
                 <p className='text-sm text-gray-500'>Update bank details and preferences</p>
@@ -465,8 +560,8 @@ export default function ProviderPaymentsPage() {
             <div className='p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
               <h4 className='font-medium text-yellow-900 mb-2'>Platform Fee</h4>
               <p className='text-sm text-yellow-700'>
-                BedSpace charges a 3% service fee on each booking. This fee is automatically
-                deducted from your earnings.
+                BedSpace charges a {platformFee}% service fee on each booking. This fee is
+                automatically deducted from your earnings.
               </p>
             </div>
 

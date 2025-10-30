@@ -113,6 +113,7 @@ export default function Sidebar({ user, isOpen, onToggle, onClose }: SidebarProp
           href: '/provider/messages',
           icon: MessageCircle,
           badge: unreadCount > 0 ? unreadCount : undefined,
+          requiresVerification: true,
         },
         {
           name: 'Analytics',

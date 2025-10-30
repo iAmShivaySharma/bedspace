@@ -199,6 +199,12 @@ export const commonApi = bedspaceApi.injectEndpoints({
       }),
     }),
 
+    // Public settings endpoint (no authentication required)
+    getPublicSettings: builder.query<ApiResponse<any>, void>({
+      query: () => '/settings',
+      providesTags: ['PublicSettings'],
+    }),
+
     getRecentActivities: builder.query<ApiResponse<any[]>, { limit?: number }>({
       query: (params = {}) => {
         const searchParams = new URLSearchParams();
@@ -327,6 +333,7 @@ export const {
   useUpdateProfileMutation,
   useUploadProfileImageMutation,
   useDetectLocationMutation,
+  useGetPublicSettingsQuery,
   useGetRecentActivitiesQuery,
   useGetPresignedUploadUrlMutation,
   useGetFavoritesQuery,

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Mail } from 'lucide-react';
+import { useVerifyOtpMutation, useResendOtpMutation } from '@/lib/api/authApi';
 
 interface OTPFormData {
   otp: string;
@@ -28,10 +29,12 @@ export default function OTPVerificationForm({
   onError,
   onResendOTP,
 }: OTPVerificationFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isResending, setIsResending] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+
+  // RTK Query hooks
+  const [verifyOtp, { isLoading }] = useVerifyOtpMutation();
+  const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
 
   const {
     register,
@@ -56,44 +59,23 @@ export default function OTPVerificationForm({
   }, [countdown]);
 
   const onSubmit = async (data: OTPFormData) => {
-    setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
+      const result = await verifyOtp(data).unwrap();
       if (result.success) {
-        // Token is now stored in httpOnly cookie by the server
         onSuccess(result.data);
       } else {
         onError(result.error || 'OTP verification failed');
       }
-    } catch (error) {
-      onError('Network error. Please try again.');
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.error || error?.message || 'Network error. Please try again.';
+      onError(errorMessage);
     }
   };
 
   const handleResendOTP = async () => {
-    setIsResending(true);
     try {
-      const response = await fetch('/api/auth/resend-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ identifier: email }),
-      });
-
-      const result = await response.json();
-
+      const result = await resendOtp({ identifier: email }).unwrap();
       if (result.success) {
         setCountdown(60);
         setCanResend(false);
@@ -101,10 +83,10 @@ export default function OTPVerificationForm({
       } else {
         onError(result.error || 'Failed to resend OTP');
       }
-    } catch (error) {
-      onError('Network error. Please try again.');
-    } finally {
-      setIsResending(false);
+    } catch (error: any) {
+      const errorMessage =
+        error?.data?.error || error?.message || 'Network error. Please try again.';
+      onError(errorMessage);
     }
   };
 
@@ -137,9 +119,18 @@ export default function OTPVerificationForm({
               {...register('otp')}
               className={`text-center text-lg tracking-widest ${errors.otp ? 'border-red-500' : ''}`}
               onChange={e => {
-                // Only allow numbers
-                const value = e.target.value.replace(/\D/g, '');
+                // Only allow numbers and limit to 6 digits
+                const value = e.target.value.replace(/\D/g, '').slice(0, 6);
                 setValue('otp', value);
+                e.target.value = value;
+              }}
+              onPaste={e => {
+                // Prevent pasting non-numeric content
+                e.preventDefault();
+                const paste = e.clipboardData?.getData('text') || '';
+                const numericValue = paste.replace(/\D/g, '').slice(0, 6);
+                setValue('otp', numericValue);
+                e.currentTarget.value = numericValue;
               }}
             />
             {errors.otp && <p className='text-sm text-red-500'>{errors.otp.message}</p>}

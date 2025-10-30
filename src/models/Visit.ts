@@ -24,24 +24,20 @@ const VisitSchema = new Schema<IVisit>(
       type: Schema.Types.ObjectId,
       ref: 'Listing',
       required: true,
-      index: true,
     },
     seekerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     providerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     scheduledDate: {
       type: Date,
       required: true,
-      index: true,
     },
     timeSlot: {
       type: String,
@@ -64,7 +60,6 @@ const VisitSchema = new Schema<IVisit>(
       type: String,
       enum: ['pending', 'confirmed', 'cancelled', 'completed'],
       default: 'pending',
-      index: true,
     },
     notes: {
       type: String,

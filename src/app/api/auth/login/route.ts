@@ -5,11 +5,23 @@ import { comparePassword, generateToken } from '@/utils/auth';
 import { loginSchema } from '@/utils/validation';
 import { logApiRequest, logError } from '@/lib/logger';
 import { logAuthActivity } from '@/lib/activityLogger';
+import { rateLimit } from '@/middleware/auth';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    // Apply rate limiting (max 5 login attempts per IP per 15 minutes)
+    const rateLimitResponse = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      maxRequests: 5,
+      keyGenerator: req => `login_${req.ip || 'unknown'}`,
+    })(request);
+
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     await connectDB();
 
     const body = await request.json();
@@ -45,20 +57,48 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user is locked out from too many failed login attempts
+    if (user.loginLockoutUntil && user.loginLockoutUntil > new Date()) {
+      const lockoutRemaining = Math.ceil((user.loginLockoutUntil.getTime() - Date.now()) / 60000);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Account temporarily locked. Please try again in ${lockoutRemaining} minutes.`,
+        },
+        { status: 429 }
+      );
+    }
+
     // Check password
     const isPasswordValid = await comparePassword(password, user.password);
     if (!isPasswordValid) {
+      // Increment failed attempts
+      const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+      user.failedLoginAttempts = failedAttempts;
+
+      // Lock account if too many failed attempts (5 attempts = 30 min lockout)
+      if (failedAttempts >= 5) {
+        user.loginLockoutUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      }
+
+      await user.save();
+
       logApiRequest('POST', '/api/auth/login', user._id.toString(), 401, Date.now() - startTime);
       return NextResponse.json(
         {
           success: false,
-          error: 'Invalid credentials',
+          error:
+            failedAttempts >= 5
+              ? 'Too many failed attempts. Account temporarily locked for 30 minutes.'
+              : `Invalid credentials. ${5 - failedAttempts} attempts remaining.`,
         },
         { status: 401 }
       );
     }
 
-    // Update last login
+    // Reset failed attempts and update last login
+    user.failedLoginAttempts = 0;
+    user.loginLockoutUntil = undefined;
     user.lastLogin = new Date();
     await user.save();
 

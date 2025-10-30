@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { User } from '@/types';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -46,9 +47,12 @@ export const verifyToken = (token: string): JWTPayload | null => {
   }
 };
 
-// Generate OTP
+// Generate OTP using cryptographically secure random
 export const generateOTP = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  const randomBytes = crypto.randomBytes(3);
+  const randomNumber = parseInt(randomBytes.toString('hex'), 16);
+  const otp = (randomNumber % 900000) + 100000;
+  return otp.toString();
 };
 
 // Generate random string for verification tokens

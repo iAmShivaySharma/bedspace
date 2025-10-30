@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,68 +20,38 @@ import {
   Car,
   Utensils,
 } from 'lucide-react';
+import {
+  useGetSeekerStatsQuery,
+  useGetSeekerActivitiesQuery,
+  useGetSeekerFavoritesQuery,
+  useGetSeekerBookingsQuery,
+} from '@/lib/api/seekerApi';
 
 export default function SeekerDashboard() {
-  const [stats, setStats] = useState({
+  const router = useRouter();
+
+  // RTK Query hooks
+  const { data: statsData, isLoading: statsLoading } = useGetSeekerStatsQuery();
+  const { data: activitiesData, isLoading: activitiesLoading } = useGetSeekerActivitiesQuery({
+    limit: 10,
+  });
+  const { data: favoritesData, isLoading: favoritesLoading } = useGetSeekerFavoritesQuery({
+    limit: 6,
+  });
+  const { data: bookingsData, isLoading: bookingsLoading } = useGetSeekerBookingsQuery({
+    limit: 5,
+  });
+
+  const stats = statsData?.data || {
     savedListings: 0,
     activeBookings: 0,
     messages: 0,
     searchAlerts: 0,
-  });
-  const [recentActivities, setRecentActivities] = useState([]);
-  const [savedListings, setSavedListings] = useState([]);
-  const [activeBookings, setActiveBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
-  // Fetch live data
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        // Fetch stats
-        const statsResponse = await fetch('/api/seeker/stats', {
-          credentials: 'include',
-        });
-        if (statsResponse.ok) {
-          const statsData = await statsResponse.json();
-          setStats(statsData.data);
-        }
-
-        // Fetch recent activities
-        const activitiesResponse = await fetch('/api/seeker/activities', {
-          credentials: 'include',
-        });
-        if (activitiesResponse.ok) {
-          const activitiesData = await activitiesResponse.json();
-          setRecentActivities(activitiesData.data);
-        }
-
-        // Fetch saved listings
-        const savedResponse = await fetch('/api/seeker/favorites', {
-          credentials: 'include',
-        });
-        if (savedResponse.ok) {
-          const savedData = await savedResponse.json();
-          setSavedListings(savedData.data);
-        }
-
-        // Fetch active bookings
-        const bookingsResponse = await fetch('/api/seeker/bookings', {
-          credentials: 'include',
-        });
-        if (bookingsResponse.ok) {
-          const bookingsData = await bookingsResponse.json();
-          setActiveBookings(bookingsData.data);
-        }
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDashboardData();
-  }, [router]);
+  };
+  const recentActivities = activitiesData?.data || [];
+  const savedListings = favoritesData?.data || [];
+  const activeBookings = bookingsData?.data || [];
+  const loading = statsLoading || activitiesLoading || favoritesLoading || bookingsLoading;
 
   if (loading) {
     return <PageSkeleton type='dashboard' />;

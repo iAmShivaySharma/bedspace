@@ -133,24 +133,20 @@ const BookingSchema = new Schema<IBooking>(
       type: Schema.Types.ObjectId,
       ref: 'Listing',
       required: true,
-      index: true,
     },
     seekerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     providerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     checkInDate: {
       type: Date,
       required: true,
-      index: true,
     },
     checkOutDate: Date,
     duration: {
@@ -178,7 +174,6 @@ const BookingSchema = new Schema<IBooking>(
       type: String,
       enum: ['pending', 'confirmed', 'cancelled', 'active', 'completed'],
       default: 'pending',
-      index: true,
     },
     paymentStatus: {
       type: String,

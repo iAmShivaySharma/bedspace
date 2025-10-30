@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticate } from '@/middleware/auth';
+import { authenticate, AuthenticatedUser } from '@/middleware/auth';
 
 export async function GET(request: NextRequest) {
   try {
     // Authenticate user
     const { user, error } = await authenticate(request);
-
     if (error || !user) {
       return NextResponse.json(
         {

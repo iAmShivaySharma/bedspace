@@ -20,12 +20,12 @@ interface RegisterRequest {
 }
 
 interface VerifyOtpRequest {
-  type: 'email' | 'phone';
   otp: string;
+  identifier: string;
 }
 
 interface ResendOtpRequest {
-  type: 'email' | 'phone';
+  identifier: string;
 }
 
 export const authApi = bedspaceApi.injectEndpoints({

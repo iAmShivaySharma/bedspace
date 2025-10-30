@@ -7,7 +7,7 @@ import { ChatLayout } from '@/components/chat';
 export default function ProviderMessagesPage() {
   return (
     <DashboardLayout>
-      <div className='h-[calc(100vh-4rem)]'>
+      <div className='h-[calc(100vh-8rem)] max-h-[600px]'>
         <ChatLayout className='h-full' />
       </div>
     </DashboardLayout>

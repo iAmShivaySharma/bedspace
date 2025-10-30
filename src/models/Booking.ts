@@ -25,25 +25,21 @@ const BookingRequestSchema = new Schema<IBookingRequest>(
       type: Schema.Types.ObjectId,
       ref: 'Listing',
       required: true,
-      index: true,
     },
     seekerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     providerId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     status: {
       type: String,
       enum: Object.values(BOOKING_STATUS),
       default: BOOKING_STATUS.PENDING,
-      index: true,
     },
     message: {
       type: String,
@@ -54,7 +50,6 @@ const BookingRequestSchema = new Schema<IBookingRequest>(
     requestedDate: {
       type: Date,
       required: true,
-      index: true,
     },
     responseMessage: {
       type: String,

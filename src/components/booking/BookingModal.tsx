@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar, CreditCard, Home, Lock, Loader2 } from 'lucide-react';
-import { useCurrency } from '@/contexts/LocalizationContext';
+import { useCurrency } from '@/hooks/useLocalization';
 import { useCreatePaymentIntentMutation } from '@/lib/api/seekerApi';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';

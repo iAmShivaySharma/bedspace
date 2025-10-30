@@ -82,35 +82,27 @@ export async function GET(request: NextRequest) {
 
     const totalResults = await Listing.countDocuments(dbQuery);
 
-    // Transform listings to match frontend format
+    // Transform listings to match frontend Listing type
     const transformedListings = listings.map(listing => {
       const provider = listing.providerId as any; // Cast to any to access populated fields
       return {
-        id: listing._id.toString(),
+        _id: listing._id.toString(),
+        providerId: provider._id.toString(),
         title: listing.title,
         description: listing.description,
-        location: `${listing.address}, ${listing.city}`,
-        price: listing.rent,
-        type:
-          listing.roomType === 'single'
-            ? 'private'
-            : listing.roomType === 'shared'
-              ? 'shared'
-              : 'entire',
-        gender: listing.genderPreference,
-        amenities: listing.facilities || [],
-        images: listing.images?.map((img: any) => img.fileUrl) || ['/api/placeholder/400/300'],
-        provider: {
-          id: provider._id.toString(),
-          name: provider.name,
-          rating: (4.0 + Math.random()).toFixed(1), // Placeholder rating
-          verified: provider.verificationStatus === 'approved',
-        },
-        coordinates: listing.coordinates || { lat: 19.076, lng: 72.8777 }, // Default Mumbai coords
+        address: listing.address,
+        city: listing.city,
+        state: listing.state,
+        pincode: listing.pincode,
+        coordinates: listing.coordinates || { latitude: 19.076, longitude: 72.8777 }, // Default Mumbai coords
         rent: listing.rent,
         securityDeposit: listing.securityDeposit,
         roomType: listing.roomType,
         genderPreference: listing.genderPreference,
+        facilities: listing.facilities || [],
+        images: listing.images || [],
+        isActive: listing.isActive,
+        isApproved: listing.isApproved,
         availableFrom: listing.availableFrom,
         createdAt: listing.createdAt,
         updatedAt: listing.updatedAt,
@@ -124,25 +116,21 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: {
-        listings: transformedListings,
-        pagination: {
-          page,
-          limit,
-          totalResults,
-          totalPages,
-          hasNextPage,
-          hasPrevPage,
-        },
-        filters: {
-          query,
-          location,
-          minPrice,
-          maxPrice,
-          type,
-          gender,
-          amenities,
-        },
+      data: transformedListings,
+      pagination: {
+        page,
+        limit,
+        total: totalResults,
+        pages: totalPages,
+      },
+      filters: {
+        query,
+        location,
+        minPrice,
+        maxPrice,
+        type,
+        gender,
+        amenities,
       },
     });
   } catch (error) {

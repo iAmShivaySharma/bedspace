@@ -4,9 +4,21 @@ import { User } from '@/models/User';
 import { generateToken } from '@/utils/auth';
 import { sendWelcomeEmail } from '@/utils/email';
 import { otpSchema } from '@/utils/validation';
+import { rateLimit } from '@/middleware/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting (max 5 OTP verification attempts per IP per hour)
+    const rateLimitResponse = rateLimit({
+      windowMs: 60 * 60 * 1000, // 1 hour
+      maxRequests: 5,
+      keyGenerator: req => `otp_verify_${req.ip || 'unknown'}`,
+    })(request);
+
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     await connectDB();
 
     const body = await request.json();
@@ -34,18 +46,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'User not found',
+          error: 'Invalid verification code or user information',
         },
-        { status: 404 }
+        { status: 400 }
+      );
+    }
+
+    // Check if user is locked out from too many failed OTP attempts
+    if (user.otpLockoutUntil && user.otpLockoutUntil > new Date()) {
+      const lockoutRemaining = Math.ceil((user.otpLockoutUntil.getTime() - Date.now()) / 60000);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Account temporarily locked. Please try again in ${lockoutRemaining} minutes.`,
+        },
+        { status: 429 }
       );
     }
 
     // Check if OTP is valid and not expired
     if (!user.emailVerificationToken || user.emailVerificationToken !== otp) {
+      // Increment failed attempts
+      const failedAttempts = (user.failedOtpAttempts || 0) + 1;
+      user.failedOtpAttempts = failedAttempts;
+
+      // Lock account if too many failed attempts (5 attempts = 30 min lockout)
+      if (failedAttempts >= 5) {
+        user.otpLockoutUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      }
+
+      await user.save();
+
       return NextResponse.json(
         {
           success: false,
-          error: 'Invalid OTP',
+          error:
+            failedAttempts >= 5
+              ? 'Too many failed attempts. Account temporarily locked for 30 minutes.'
+              : `Invalid verification code. ${5 - failedAttempts} attempts remaining.`,
         },
         { status: 400 }
       );
@@ -61,10 +99,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark email as verified
+    // Mark email as verified and reset failed attempts
     user.isEmailVerified = true;
     user.emailVerificationToken = undefined;
     user.otpExpiry = undefined;
+    user.failedOtpAttempts = 0;
+    user.otpLockoutUntil = undefined;
 
     // Update overall verification status
     const userWithVerification = user as any; // Type assertion for verificationStatus

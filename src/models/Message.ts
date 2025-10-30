@@ -36,19 +36,16 @@ const MessageSchema = new Schema<IMessage>(
       type: Schema.Types.ObjectId,
       ref: 'Conversation',
       required: true,
-      index: true,
     },
     senderId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     receiverId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      index: true,
     },
     content: {
       type: String,
@@ -66,7 +63,6 @@ const MessageSchema = new Schema<IMessage>(
     isRead: {
       type: Boolean,
       default: false,
-      index: true,
     },
     readAt: Date,
     isDeleted: {
@@ -96,17 +92,14 @@ const ConversationSchema = new Schema<IConversation>(
     lastMessageAt: {
       type: Date,
       default: Date.now,
-      index: true,
     },
     isActive: {
       type: Boolean,
       default: true,
-      index: true,
     },
     listingId: {
       type: Schema.Types.ObjectId,
       ref: 'Listing',
-      index: true,
     },
     listingTitle: {
       type: String,
