@@ -181,7 +181,7 @@ const SettingsSchema = new Schema<ISettings>(
       },
       supportedCurrencies: {
         type: [String],
-        default: ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'JPY'],
+        default: ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'JPY', 'AED'],
       },
     },
   },

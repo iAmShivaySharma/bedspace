@@ -40,6 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# logs
-/logs/
-*.logs
+# Logs
+logs/
+*.log
+*.log.*
+debug.log
+pm2.log

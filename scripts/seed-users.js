@@ -1,8 +1,6 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
-import dotenv from 'dotenv';
-
-dotenv.config({ path: '.env.local' });
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+require('dotenv').config({ path: '.env.local' });
 
 // User schema (simplified for seeding)
 const userSchema = new mongoose.Schema(

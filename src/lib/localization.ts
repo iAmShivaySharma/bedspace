@@ -16,7 +16,7 @@ export const DEFAULT_LOCALIZATION: LocalizationSettings = {
   defaultTimezone: 'Asia/Kolkata',
   dateFormat: 'DD/MM/YYYY',
   timeFormat: '12',
-  supportedCurrencies: ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'JPY'],
+  supportedCurrencies: ['INR', 'USD', 'EUR', 'GBP', 'AUD', 'CAD', 'SGD', 'JPY', 'AED'],
 };
 
 // Currency symbols mapping
@@ -29,6 +29,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   CAD: 'C$',
   SGD: 'S$',
   JPY: '¥',
+  AED: 'AED',
 };
 
 // Global localization settings (can be overridden by admin settings)
