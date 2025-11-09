@@ -346,9 +346,7 @@ function SearchPageContent() {
 
                   <div className='flex items-center justify-between'>
                     <div>
-                      <span className='text-2xl font-bold text-gray-900'>
-                        {formatCurrency(listing.rent)}
-                      </span>
+                      <span className='text-2xl font-bold text-gray-900'>{listing.rent}</span>
                       <span className='text-gray-600'>/month</span>
                     </div>
                     <div className='flex gap-2'>

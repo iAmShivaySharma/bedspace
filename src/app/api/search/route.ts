@@ -83,31 +83,33 @@ export async function GET(request: NextRequest) {
     const totalResults = await Listing.countDocuments(dbQuery);
 
     // Transform listings to match frontend Listing type
-    const transformedListings = listings.map(listing => {
-      const provider = listing.providerId as any; // Cast to any to access populated fields
-      return {
-        _id: listing._id.toString(),
-        providerId: provider._id.toString(),
-        title: listing.title,
-        description: listing.description,
-        address: listing.address,
-        city: listing.city,
-        state: listing.state,
-        pincode: listing.pincode,
-        coordinates: listing.coordinates || { latitude: 19.076, longitude: 72.8777 }, // Default Mumbai coords
-        rent: listing.rent,
-        securityDeposit: listing.securityDeposit,
-        roomType: listing.roomType,
-        genderPreference: listing.genderPreference,
-        facilities: listing.facilities || [],
-        images: listing.images || [],
-        isActive: listing.isActive,
-        isApproved: listing.isApproved,
-        availableFrom: listing.availableFrom,
-        createdAt: listing.createdAt,
-        updatedAt: listing.updatedAt,
-      };
-    });
+    const transformedListings = listings
+      .filter(listing => listing.providerId !== null)
+      .map(listing => {
+        const provider = listing.providerId as any;
+        return {
+          _id: listing._id.toString(),
+          providerId: provider?._id?.toString() || null,
+          title: listing.title,
+          description: listing.description,
+          address: listing.address,
+          city: listing.city,
+          state: listing.state,
+          pincode: listing.pincode,
+          coordinates: listing.coordinates || { latitude: 19.076, longitude: 72.8777 },
+          rent: listing.rent,
+          securityDeposit: listing.securityDeposit,
+          roomType: listing.roomType,
+          genderPreference: listing.genderPreference,
+          facilities: listing.facilities || [],
+          images: listing.images || [],
+          isActive: listing.isActive,
+          isApproved: listing.isApproved,
+          availableFrom: listing.availableFrom,
+          createdAt: listing.createdAt,
+          updatedAt: listing.updatedAt,
+        };
+      });
 
     // Calculate pagination info
     const totalPages = Math.ceil(totalResults / limit);

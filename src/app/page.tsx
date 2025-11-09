@@ -646,7 +646,7 @@ export default function Home() {
                     <div className='flex items-center justify-between pt-4 border-t border-gray-100'>
                       <div>
                         <span className='text-2xl md:text-3xl font-bold text-gray-900'>
-                          {formatCurrency(listing.rent || 0)}
+                          ₹{listing.rent || 0}
                         </span>
                         <span className='text-gray-600 text-sm'>/month</span>
                       </div>

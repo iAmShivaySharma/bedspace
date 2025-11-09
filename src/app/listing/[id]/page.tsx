@@ -325,13 +325,11 @@ export default function ListingDetailsPage() {
               <div className='mb-6'>
                 <div className='flex items-center mb-2'>
                   <IndianRupee className='w-6 h-6 text-blue-600 mr-1' />
-                  <span className='text-3xl font-bold text-gray-900'>
-                    {formatCurrency(listing.rent)}
-                  </span>
+                  <span className='text-3xl font-bold text-gray-900'>{listing.rent}</span>
                   <span className='text-gray-600 ml-2'>per month</span>
                 </div>
                 <p className='text-sm text-gray-600'>
-                  Security Deposit: {formatCurrency(listing.securityDeposit)}
+                  Security Deposit: ₹{listing.securityDeposit}
                 </p>
               </div>
 

@@ -580,6 +580,7 @@ export default function SettingsPage() {
                           <SelectItem value='CAD'>Canadian Dollar (CAD)</SelectItem>
                           <SelectItem value='SGD'>Singapore Dollar (SGD)</SelectItem>
                           <SelectItem value='JPY'>Japanese Yen (JPY)</SelectItem>
+                          <SelectItem value='AED'>Arab Emirates Dirham (AED)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
