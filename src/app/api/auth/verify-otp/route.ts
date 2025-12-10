@@ -5,6 +5,7 @@ import { generateToken } from '@/utils/auth';
 import { sendWelcomeEmail } from '@/utils/email';
 import { otpSchema } from '@/utils/validation';
 import { rateLimit } from '@/middleware/auth';
+import { getClientIp } from '@/utils/ipExtractor';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = rateLimit({
       windowMs: 60 * 60 * 1000, // 1 hour
       maxRequests: 5,
-      keyGenerator: req => `otp_verify_${req.ip || 'unknown'}`,
+      keyGenerator: req => getClientIp(req),
     })(request);
 
     if (rateLimitResponse) {

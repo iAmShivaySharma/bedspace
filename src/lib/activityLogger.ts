@@ -98,10 +98,7 @@ export const ACTIVITY_DESCRIPTIONS = {
 // Helper function to extract IP and User Agent from request
 export const getRequestInfo = (request: NextRequest) => {
   const ipAddress =
-    request.headers.get('x-forwarded-for') ||
-    request.headers.get('x-real-ip') ||
-    request.ip ||
-    'unknown';
+    request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
 
   const userAgent = request.headers.get('user-agent') || 'unknown';
 

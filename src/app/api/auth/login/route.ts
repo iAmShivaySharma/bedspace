@@ -6,6 +6,7 @@ import { loginSchema } from '@/utils/validation';
 import { logApiRequest, logError } from '@/lib/logger';
 import { logAuthActivity } from '@/lib/activityLogger';
 import { rateLimit } from '@/middleware/auth';
+import { getClientIp } from '@/utils/ipExtractor';
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
       maxRequests: 5,
-      keyGenerator: req => `login_${req.ip || 'unknown'}`,
+      keyGenerator: req => getClientIp(req),
     })(request);
 
     if (rateLimitResponse) {

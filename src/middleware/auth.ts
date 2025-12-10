@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/utils/auth';
 import connectDB from '@/lib/mongodb';
 import { User } from '@/models/User';
+import { getClientIp } from '@/utils/ipExtractor';
 
 export interface AuthenticatedUser {
   _id: string;
@@ -307,7 +308,7 @@ export function rateLimit(
   const { windowMs, maxRequests, keyGenerator } = options;
 
   return (request: NextRequest) => {
-    const key = keyGenerator ? keyGenerator(request) : request.ip || 'anonymous';
+    const key = keyGenerator ? keyGenerator(request) : getClientIp(request);
     const now = Date.now();
     const windowStart = now - windowMs;
 
